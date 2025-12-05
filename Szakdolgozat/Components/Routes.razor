@@ -1,0 +1,13 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Szakdolgozat.Components.Layout
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData"
+                            DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+
+    <NotFound>
+        <h3>Page not found</h3>
+    </NotFound>
+</Router>

@@ -1,0 +1,107 @@
+﻿/* Fullscreen modern background */
+.login-page {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at top, #eaf3ff, #dce9ff);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Glass-style card */
+.login-container {
+    width: 360px;
+    padding: 36px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 18px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    animation: fadeUp 0.6s ease;
+}
+
+/* Soft entrance animation */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Title */
+.login-title {
+    text-align: center;
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: #243a63;
+    margin-bottom: 10px;
+}
+
+/* Inputs (modern floating style) */
+.login-container input {
+    padding: 13px 14px;
+    border-radius: 10px;
+    border: 1px solid #d6e2ff;
+    font-size: 15px;
+    background: rgba(245, 248, 255, 0.7);
+    transition: 0.2s ease;
+}
+
+    .login-container input::placeholder {
+        color: #7c8fb3;
+    }
+
+    .login-container input:focus {
+        outline: none;
+        border-color: #4f82ff;
+        box-shadow: 0 0 0 3px rgba(79, 130, 255, 0.2);
+        background: white;
+        transform: scale(1.01);
+    }
+
+/* Modern gradient button */
+.login-container button {
+    margin-top: 12px;
+    padding: 13px;
+    background: linear-gradient(135deg, #5f8dff, #3b6bff);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 10px 20px rgba(59, 107, 255, 0.35);
+}
+
+    .login-container button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 26px rgba(59, 107, 255, 0.4);
+    }
+
+    .login-container button:active {
+        transform: translateY(0);
+        box-shadow: 0 8px 16px rgba(59, 107, 255, 0.35);
+    }
+
+
+.login-error {
+    color: #d40000;
+    text-align: center;
+    font-size: 14px;
+}
+
+
+@media (max-width: 420px) {
+    .login-container {
+        width: 90%;
+        padding: 28px;
+    }
+}

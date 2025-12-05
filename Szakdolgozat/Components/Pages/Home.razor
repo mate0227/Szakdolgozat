@@ -1,0 +1,27 @@
+﻿@page "/"
+@inject Services.UserSession Session
+@inject NavigationManager Nav
+
+<h3>Home</h3>
+
+@if (!Session.IsLoggedIn)
+{
+    <p>You are not logged in. Redirecting...</p>
+}
+else
+{
+    <p>Welcome, @Session.CurrentUser!.Username</p>
+    <p>Role: @Session.CurrentUser!.RoleName</p>
+
+    <a href="/logout">Logout</a>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login", true);
+        }
+    }
+}

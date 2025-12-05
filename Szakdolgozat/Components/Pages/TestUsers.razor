@@ -1,0 +1,56 @@
+﻿@page "/test-users"
+@inject Services.UserTestService UserService
+
+<h3>Users Table Test</h3>
+
+@if (users == null)
+{
+    <p>Loading users...</p>
+}
+else if (users.Count == 0)
+{
+    <p>No users found.</p>
+}
+else
+{
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>UserCode</th>
+                <th>Username</th>
+                <th>Password (hash)</th>
+                <th>RoleId</th>
+                <th>RoleName</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in users)
+            {
+                <tr>
+                    <td>@u.UserCode</td>
+                    <td>@u.Username</td>
+                    <td style="font-size:10px">@u.Password</td>
+                    <td>@u.RoleId</td>
+                    <td>@u.RoleName</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    List<Szakdolgozat.Models.User>? users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            users = await UserService.GetAllUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            users = new();
+            Console.WriteLine(ex.Message);
+        }
+    }
+}
