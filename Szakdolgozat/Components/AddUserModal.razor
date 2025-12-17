@@ -1,0 +1,99 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+
+        <h3>Új felhasználó</h3>
+
+        <div class="form-row">
+            <label>Felhasználónév</label>
+            <input @bind="Username" class="@GetInputClass(Username)" />
+
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Username))
+            {
+                <p class="field-error">A felhasználónév kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Jelszó</label>
+            <input type="password" @bind="Password" class="@GetInputClass(Password)" />
+
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Password))
+            {
+                <p class="field-error">A jelszó kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Jogosultság</label>
+            <select @bind="SelectedRoleId" class="@GetInputClass(SelectedRoleId)">
+                <option value="0">-- Válasszon jogosultságot --</option>
+
+                @foreach (var r in Roles)
+                {
+                    <option value="@r.Id">@r.Name</option>
+                }
+            </select>
+
+            @if (ShowErrors && SelectedRoleId == 0)
+            {
+                <p class="field-error">A jogosultság kiválasztása kötelező!</p>
+            }
+        </div>
+
+        <div class="button-row">
+            <button class="save-btn" @onclick="SaveUser">Mentés</button>
+            <button class="close-btn" @onclick="Close">Mégse</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<AddUserModel> OnSave { get; set; }
+
+    public bool ShowErrors { get; set; } = false;
+
+    public string Username { get; set; } = "";
+    public string Password { get; set; } = "";
+    public int SelectedRoleId { get; set; }
+
+    public List<(int Id, string Name)> Roles { get; set; } =
+        new() { (1, "Admin"), (2, "User") };
+
+    void Close() => OnClose.InvokeAsync();
+
+    async Task SaveUser()
+    {
+        ShowErrors = true;
+
+        if (string.IsNullOrWhiteSpace(Username) ||
+            string.IsNullOrWhiteSpace(Password) ||
+            SelectedRoleId == 0)
+        {
+            return; // don't send to DB
+        }
+
+        await OnSave.InvokeAsync(new AddUserModel
+        {
+            Username = Username,
+            Password = Password,
+            RoleId = SelectedRoleId
+        });
+    }
+
+    string GetInputClass(object value)
+    {
+        if (!ShowErrors) return "";
+
+        if (value is string s && string.IsNullOrWhiteSpace(s))
+            return "invalid-input";
+
+        if (value is int i && i == 0)
+            return "invalid-input";
+
+        return "";
+    }
+}

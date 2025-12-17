@@ -1,0 +1,74 @@
+﻿.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(6px);
+    z-index: 200;
+}
+
+.modal-window {
+    background: rgba(255,255,255,0.90);
+    backdrop-filter: blur(10px);
+    padding: 28px;
+    width: 400px;
+    border-radius: 14px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+}
+
+.form-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 14px;
+}
+
+    .form-row label {
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+        color: #243a63;
+    }
+
+    .form-row input,
+    .form-row select {
+        padding: 10px;
+        border: 1px solid #ccd5e0;
+        border-radius: 8px;
+    }
+
+.button-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.save-btn {
+    padding: 10px 14px;
+    background: #5f8dff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.close-btn {
+    padding: 10px 14px;
+    background: #dcdcdc;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.field-error {
+    color: #b70000;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+.invalid-input {
+    border: 1px solid #d60000 !important;
+    background: #ffeaea !important;
+}
+

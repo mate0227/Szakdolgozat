@@ -1,0 +1,170 @@
+﻿@inject Services.SimpleLoginService LoginService
+@using Szakdolgozat.Models
+@inject Services.UserSession Session
+
+
+<div class="modal-overlay">
+    <div class="modal-window">
+
+        <div class="modal-header">
+            <h3>Felhasználók kezelése</h3>
+            <button class="close-x" @onclick="Close">Bezár</button>
+        </div>
+
+
+
+        @if (users == null)
+        {
+            <p>Felhasználók betöltése...</p>
+        }
+        else if (users.Count == 0)
+        {
+            <p>Nincs felhasználó.</p>
+        }
+        else
+        {
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>Felhasználónév</th>
+                        <th>Jogosultság</th>
+                        <th style="width: 170px;">Kezelés</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in users)
+                    {
+                        <tr>
+                            <td>@u.Username</td>
+                            <td>@u.RoleName</td>
+                            <td>
+                                <button class="table-btn edit" @onclick="() => OpenEdit(u)">Módosítás</button>
+
+                                @if (u.UserCode == Session.CurrentUser!.UserCode)
+                                {
+                                    <button class="table-btn delete" disabled title="Saját fiókot nem törölhet.">Törlés</button>
+                                }
+                                else
+                                {
+                                    <button class="table-btn delete" @onclick="() => OpenDelete(u)">Törlés</button>
+                                }
+
+
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <button class="add-btn" @onclick="OpenAdd">Új felhasználó</button>
+        }
+
+
+
+    </div>
+</div>
+
+@if (ShowAdd)
+{
+    <AddUserModal OnClose="() => ShowAdd = false"
+                  OnSave="HandleAddUser" />
+
+}
+
+@if (ShowEdit)
+{
+    <EditUserModal 
+        EditingUser="SelectedUser"
+        OnClose="() => ShowEdit = false"
+        OnSave="HandleEditUser" />
+}
+
+@if (ShowDelete)
+{
+    <DeleteUserModal Username="@SelectedUser!.Username"
+                     UserCode="@SelectedUser!.UserCode"
+                     OnDelete="HandleDeleteUser"
+                     OnClose="() => ShowDelete = false" />
+}
+
+
+
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<User>? users;
+
+    private bool ShowAdd = false;
+
+    private bool ShowEdit = false;
+    private User? SelectedUser;
+
+    private bool ShowDelete = false;
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await LoginService.GetAllUsersAsync();
+    }
+
+    void OpenAdd()
+    {
+        ShowAdd = true;
+    }
+
+    private void Close() => OnClose.InvokeAsync();
+
+    async Task HandleAddUser(AddUserModel model)
+    {
+        bool ok = await LoginService.CreateUserAsync(model.Username, model.Password, model.RoleId);
+
+        if (ok)
+        {
+            // Reload the list
+            users = await LoginService.GetAllUsersAsync();
+            ShowAdd = false; // close modal
+        }
+    }
+
+    void OpenEdit(User user)
+    {
+        SelectedUser = user;
+        ShowEdit = true;
+    }
+
+    async Task HandleEditUser(EditUserModel model)
+    {
+        bool ok = await LoginService.UpdateUserAsync(
+            model.UserCode,
+            model.Username,
+            model.RoleId
+        );
+
+        if (ok)
+        {
+            users = await LoginService.GetAllUsersAsync();
+            ShowEdit = false;
+        }
+    }
+
+
+    void OpenDelete(User user)
+    {
+        SelectedUser = user;
+        ShowDelete = true;
+    }
+
+    async Task HandleDeleteUser(int userCode)
+    {
+        bool ok = await LoginService.DeleteUserAsync(userCode);
+
+        if (ok)
+        {
+            users = await LoginService.GetAllUsersAsync(); // refresh user list
+            ShowDelete = false; // close modal
+        }
+    }
+
+}

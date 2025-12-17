@@ -1,0 +1,72 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+
+        <h3>Felhasználó módosítása</h3>
+
+        <div class="modal-body">
+
+            <label>Felhasználónév</label>
+            <input @bind="Username" />
+
+            <label>Jogosultság</label>
+            <select @bind="SelectedRoleId">
+                @foreach (var r in Roles)
+                {
+                    <option value="@r.Id">@r.Name</option>
+                }
+            </select>
+
+        </div>
+
+        <div class="modal-actions">
+            <button class="save-btn" @onclick="SaveUser">Mentés</button>
+            <button class="close-btn" @onclick="Close">Mégse</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    // 🔹 Incoming parameters from UserManagementModal
+    [Parameter] public User? EditingUser { get; set; }
+    [Parameter] public EventCallback<EditUserModel> OnSave { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    // 🔹 Fields to edit
+    public string Username { get; set; } = "";
+    public int SelectedRoleId { get; set; }
+
+    // 🔹 Role list (same as AddUserModal for now)
+    public List<(int Id, string Name)> Roles { get; set; } =
+    new()
+    {
+        (1, "Admin"),
+        (2, "User")
+    };
+
+    // 🔹 When modal opens, pre-fill with user's data
+    protected override void OnParametersSet()
+    {
+        if (EditingUser != null)
+        {
+            Username = EditingUser.Username;
+            SelectedRoleId = EditingUser.RoleId;
+        }
+    }
+
+    // 🔹 Send edited data back to parent component
+    async Task SaveUser()
+    {
+        await OnSave.InvokeAsync(new EditUserModel
+        {
+            UserCode = EditingUser!.UserCode,
+            Username = Username,
+            RoleId = SelectedRoleId
+        });
+    }
+
+    // 🔹 Close modal
+    void Close() => OnClose.InvokeAsync();
+}

@@ -1,0 +1,32 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+
+        <h3>Delete User</h3>
+
+        <p>Are you sure you want to delete user <b>@Username</b>?</p>
+
+
+        <div class="modal-actions">
+            <button class="delete-btn" @onclick="ConfirmDelete">Delete</button>
+            <button class="close-btn" @onclick="Close">Cancel</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Username { get; set; } = "";
+    [Parameter] public int UserCode { get; set; }
+
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    async Task ConfirmDelete()
+    {
+        await OnDelete.InvokeAsync(UserCode);
+    }
+
+    void Close() => OnClose.InvokeAsync();
+}

@@ -8,8 +8,18 @@
 
         <h3 class="login-title">Szakdolgozat</h3>
 
-        <input placeholder="Felhasználónév" @bind="username" />
-        <input placeholder="Jelszó" type="password" @bind="password" />
+        <input placeholder="Felhasználónév"
+               @bind="username"
+               @bind:event="oninput"
+               @onkeydown="HandleKey" />
+
+        <input placeholder="Jelszó"
+               type="password"
+               @bind="password"
+               @bind:event="oninput"
+               @onkeydown="HandleKey" />
+
+
 
         <button type="button" @onclick="DoLogin">Bejelentkezés</button>
 
@@ -40,4 +50,13 @@
         Session.Login(user);
         Nav.NavigateTo("/");
     }
+
+    async Task HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await DoLogin();
+        }
+    }
+
 }
