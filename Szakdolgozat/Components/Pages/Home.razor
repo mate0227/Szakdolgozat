@@ -2,122 +2,20 @@
 @inject Services.UserSession Session
 @inject NavigationManager Nav
 
-<div class="home-container">
-    <header class="home-header">
-        <div class="header-left">
-            <h3>Home</h3>
-
-            <nav class="menu-bar">
-
-                <!-- TÖRZSEK -->
-                <div class="menu-dropdown"
-                     @onmouseenter=@(() => ShowMenu("torzsek"))
-                     @onmouseleave=@(() => ShowMenu(null))>
-
-                    <button class="menu-btn">Törzsek ▾</button>
-
-                    <div class="menu-panel @(ActiveMenu == "torzsek" ? "show" : "")">
-                        <a class="menu-item">Terméktörzs</a>
-                        <a class="menu-item">Partnertörzs</a>
-                        <a class="menu-item">Termékcsoporttörzs</a>
-                        <a class="menu-item">Raktártörzs</a>
-                        <a class="menu-item">Automaták, felhasználási hely</a>
-                        <a class="menu-item">Eladási ár törzs</a>
-                    </div>
-                </div>
-
-                <!-- KÉSZLET -->
-                <div class="menu-dropdown"
-                     @onmouseenter=@(() => ShowMenu("keszlet"))
-                     @onmouseleave=@(() => ShowMenu(null))>
-
-                    <button class="menu-btn">Készlet ▾</button>
-
-                    <div class="menu-panel @(ActiveMenu == "keszlet" ? "show" : "")">
-                        <a class="menu-item">Bevételezés</a>
-                        <a class="menu-item">Átadás</a>
-                        <a class="menu-item">Kiadás</a>
-                    </div>
-                </div>
-
-                <!-- KIMUTATÁSOK -->
-                <div class="menu-dropdown"
-                     @onmouseenter=@(() => ShowMenu("kimutatasok"))
-                     @onmouseleave=@(() => ShowMenu(null))>
-
-                    <button class="menu-btn">Kimutatások ▾</button>
-
-                    <div class="menu-panel @(ActiveMenu == "kimutatasok" ? "show" : "")">
-                        <a class="menu-item">Raktárkészlet lista</a>
-                        <a class="menu-item">Árak (terméktörzs)</a>
-                        <a class="menu-item">Bevételek (összesen / tételesen)</a>
-                        <a class="menu-item">Automaták termékei</a>
-                    </div>
-                </div>
-
-            </nav>
-        </div>
-
-        <!-- USER MENU RIGHT -->
-        @if (Session.IsLoggedIn)
-        {
-            <div class="user-dropdown"
-                 @onmouseenter=@(() => ShowDropdown(true))
-                 @onmouseleave=@(() => ShowDropdown(false))>
-
-                <button class="user-btn" @onclick="ToggleDropdown">
-                    @Session.CurrentUser!.Username
-                    <span class="caret">▾</span>
-                </button>
-
-                <div class="dropdown-menu @(_dropdownOpen ? "show" : "")">
-                    @if (Session.CurrentUser!.RoleName == "Admin")
-                    {
-                        <a class="dropdown-item" @onclick="OpenUserManagement">
-                            Felhasználók kezelése
-                        </a>
-                    }
-                    <a class="dropdown-item" @onclick="Logout">Kijelentkezés</a>
-                </div>
-            </div>
-        }
-    </header>
-
-    <main class="home-main">
-        @if (!Session.IsLoggedIn)
-        {
-            <p>You are not logged in. Redirecting...</p>
-        }
-        else
-        {
-            <h2>Üdv, @Session.CurrentUser!.Username!</h2>
-            <p>Jogosultság: @Session.CurrentUser!.RoleName</p>
-        }
-    </main>
-
-    @if (_showUserModal)
-    {
-        <UserManagementModal OnClose="CloseUserManagement" />
-    }
-</div>
+@if (!Session.IsLoggedIn)
+{
+    <p>You are not logged in. Redirecting...</p>
+}
+else
+{
+    <h2>Üdv, @Session.CurrentUser!.Username!</h2>
+    <p>Jogosultság: @Session.CurrentUser!.RoleName</p>
+}
 
 @code {
-    private bool _dropdownOpen;
-    private bool _showUserModal = false;
-    private string? ActiveMenu = null;
-
     protected override void OnInitialized()
     {
         if (!Session.IsLoggedIn)
             Nav.NavigateTo("/login", true);
     }
-
-    private void ToggleDropdown() => _dropdownOpen = !_dropdownOpen;
-    private void ShowDropdown(bool value) => _dropdownOpen = value;
-    private void Logout() => Nav.NavigateTo("/logout");
-
-    private void OpenUserManagement() => _showUserModal = true;
-    private void CloseUserManagement() => _showUserModal = false;
-
-    private void ShowMenu(string? menu) => ActiveMenu = menu;
 }

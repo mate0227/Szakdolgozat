@@ -1,0 +1,101 @@
+﻿@inject Services.UserSession Session
+@inject NavigationManager Nav
+
+<header class="home-header">
+    <div class="header-left">
+        <h3>Home</h3>
+
+        <nav class="menu-bar">
+
+            <div class="menu-dropdown"
+                 @onmouseenter=@(() => ShowMenu("torzsek"))
+                 @onmouseleave=@(() => ShowMenu(null))>
+
+                <button class="menu-btn" type="button">Törzsek ▾</button>
+
+                <div class="menu-panel @(ActiveMenu == "torzsek" ? "show" : "")">
+                    <a class="menu-item">Termékek</a>
+                    <a class="menu-item">Partnerek</a>
+                    <a class="menu-item">Termékcsoportok</a>
+                    <a class="menu-item">Raktárak</a>
+                    <a class="menu-item">Automaták, felhasználási helyek</a>
+                    <a class="menu-item">Eladási árak</a>
+                </div>
+            </div>
+
+            <div class="menu-dropdown"
+                 @onmouseenter=@(() => ShowMenu("keszlet"))
+                 @onmouseleave=@(() => ShowMenu(null))>
+
+                <button class="menu-btn" type="button">Készlet ▾</button>
+
+                <div class="menu-panel @(ActiveMenu == "keszlet" ? "show" : "")">
+                    <a class="menu-item">Bevételezés</a>
+                    <a class="menu-item">Átadás</a>
+                    <a class="menu-item">Kiadás</a>
+                </div>
+            </div>
+
+            <div class="menu-dropdown"
+                 @onmouseenter=@(() => ShowMenu("kimutatasok"))
+                 @onmouseleave=@(() => ShowMenu(null))>
+
+                <button class="menu-btn" type="button">Kimutatások ▾</button>
+
+                <div class="menu-panel @(ActiveMenu == "kimutatasok" ? "show" : "")">
+                    <a class="menu-item">Raktárkészlet lista</a>
+                    <a class="menu-item">Árak (terméktörzs)</a>
+                    <a class="menu-item">Bevételek (összesen / tételesen)</a>
+                    <a class="menu-item">Automaták termékei</a>
+                </div>
+            </div>
+
+        </nav>
+    </div>
+
+    @if (Session.IsLoggedIn)
+    {
+        <div class="user-dropdown"
+             @onmouseenter=@(() => ShowDropdown(true))
+             @onmouseleave=@(() => ShowDropdown(false))>
+
+            <button class="user-btn" @onclick="ToggleDropdown" type="button">
+                @Session.CurrentUser!.Username
+                <span class="caret">▾</span>
+            </button>
+
+            <div class="dropdown-menu @(_dropdownOpen ? "show" : "")">
+                @if (Session.CurrentUser!.RoleName == "Admin")
+                {
+                    <a class="dropdown-item" @onclick="OpenUserManagement">
+                        Felhasználók kezelése
+                    </a>
+                }
+                <a class="dropdown-item" @onclick="GoToLogs">Logok</a>
+                <a class="dropdown-item" @onclick="Logout">Kijelentkezés</a>
+            </div>
+        </div>
+    }
+</header>
+
+@if (_showUserModal)
+{
+    <UserManagementModal OnClose="CloseUserManagement" />
+}
+
+@code {
+    private bool _dropdownOpen;
+    private bool _showUserModal;
+    private string? ActiveMenu;
+
+    private void ToggleDropdown() => _dropdownOpen = !_dropdownOpen;
+    private void ShowDropdown(bool value) => _dropdownOpen = value;
+
+    private void Logout() => Nav.NavigateTo("/logout", true);
+    private void GoToLogs() => Nav.NavigateTo("/logs", true);
+
+    private void OpenUserManagement() => _showUserModal = true;
+    private void CloseUserManagement() => _showUserModal = false;
+
+    private void ShowMenu(string? menu) => ActiveMenu = menu;
+}
