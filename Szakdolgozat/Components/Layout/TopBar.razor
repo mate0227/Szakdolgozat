@@ -1,5 +1,8 @@
 ﻿@inject Services.UserSession Session
 @inject NavigationManager Nav
+@inject Services.LogService LogService
+@inject IHttpContextAccessor Http
+
 
 <header class="home-header">
     <div class="header-left">
@@ -91,8 +94,25 @@
     private void ToggleDropdown() => _dropdownOpen = !_dropdownOpen;
     private void ShowDropdown(bool value) => _dropdownOpen = value;
 
-    private void Logout() => Nav.NavigateTo("/logout", true);
-    private void GoToLogs() => Nav.NavigateTo("/logs", true);
+    private async Task Logout()
+    {
+        if (Session.CurrentUser is not null)
+        {
+            var ip = Http.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            await LogService.AddLogAsync(
+                Session.CurrentUser.UserCode,
+                "LOGOUT",
+                "User logged out",
+                page: "/logout",
+                ipAddress: ip
+            );
+        }
+
+        Nav.NavigateTo("/logout", true);
+    }
+
+    private void GoToLogs() => Nav.NavigateTo("/logs");
+
 
     private void OpenUserManagement() => _showUserModal = true;
     private void CloseUserManagement() => _showUserModal = false;

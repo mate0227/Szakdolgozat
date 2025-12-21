@@ -35,6 +35,8 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserTestService>();
 builder.Services.AddScoped<SimpleLoginService>();
 builder.Services.AddScoped<UserSession>();
+builder.Services.AddScoped<LogService>();
+
 
 
 

@@ -1,0 +1,100 @@
+﻿@page "/logs"
+@inject Services.UserSession Session
+@inject NavigationManager Nav
+@inject Services.LogService LogService
+
+<h2>Logok</h2>
+
+@if (!Session.IsLoggedIn)
+{
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
+}
+else if (Session.CurrentUser?.RoleName != "Admin")
+{
+    <p>Nincs jogosultságod a logok megtekintéséhez.</p>
+}
+else
+{
+    <div class="logs-toolbar">
+        <input class="logs-search"
+               placeholder="Keresés (felhasználó, action, szöveg, oldal)..."
+               @bind="_search"
+               @bind:event="oninput" />
+
+        <button class="logs-btn" @onclick="Reload">Frissítés</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (_logs.Count == 0)
+    {
+        <p>Nincs találat.</p>
+    }
+    else
+    {
+        <div class="logs-table-wrap">
+            <table class="logs-table">
+                <thead>
+                    <tr>
+                        <th>Dátum</th>
+                        <th>Felhasználó</th>
+                        <th>Action</th>
+                        <th>Leírás</th>
+                        <th>Oldal</th>
+                        <th>Entitás</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var l in _logs)
+                    {
+                        <tr>
+                            <td>@l.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@l.Username (@l.UserCode)</td>
+                            <td>@l.ActionType</td>
+                            <td>@l.ActionText</td>
+                            <td>@l.Page</td>
+                            <td>@(l.EntityName is null ? "" : $"{l.EntityName}:{l.EntityId}")</td>
+                            <td>@l.IpAddress</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private bool _loading = true;
+    private string _search = "";
+    private List<Szakdolgozat.Models.UserLogEntry> _logs = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login", true);
+            return;
+        }
+
+        // Admin only page
+        if (Session.CurrentUser?.RoleName != "Admin")
+            return;
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        _logs = await LogService.GetLogsAsync(take: 200, search: _search);
+
+        _loading = false;
+    }
+
+    private async Task Reload() => await LoadAsync();
+}

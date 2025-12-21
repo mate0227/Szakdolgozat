@@ -1,0 +1,50 @@
+﻿.logs-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 14px 0 18px;
+}
+
+.logs-search {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #d6d6d6;
+}
+
+.logs-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #3b6bff;
+    color: white;
+    font-weight: 600;
+}
+
+.logs-table-wrap {
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+    .logs-table th,
+    .logs-table td {
+        padding: 10px;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .logs-table th {
+        color: #243a63;
+        background: rgba(255,255,255,0.8);
+        position: sticky;
+        top: 0;
+    }
