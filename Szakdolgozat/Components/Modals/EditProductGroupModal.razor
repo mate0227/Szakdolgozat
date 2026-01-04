@@ -1,0 +1,48 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+        <h3>Termékcsoport módosítása</h3>
+
+        <div class="form-row">
+            <label>Név</label>
+            <input @bind="Name" class="@GetInputClass(Name)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Name))
+            {
+                <p class="field-error">A név kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="button-row">
+            <button class="save-btn" @onclick="Save" type="button">Mentés</button>
+            <button class="close-btn" @onclick="Close" type="button">Mégse</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ProductGroupItem Group { get; set; } = null!;
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<ProductGroupItem> OnSave { get; set; }
+
+    public bool ShowErrors { get; set; }
+    public string Name { get; set; } = "";
+
+    protected override void OnInitialized()
+    {
+        Name = Group.Name;
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private async Task Save()
+    {
+        ShowErrors = true;
+        if (string.IsNullOrWhiteSpace(Name)) return;
+
+        await OnSave.InvokeAsync(new ProductGroupItem { Id = Group.Id, Name = Name });
+    }
+
+    private string GetInputClass(string value)
+        => ShowErrors && string.IsNullOrWhiteSpace(value) ? "invalid-input" : "";
+}

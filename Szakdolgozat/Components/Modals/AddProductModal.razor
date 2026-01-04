@@ -1,0 +1,126 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+        <h3>Új termék</h3>
+
+        <div class="form-row">
+            <label>Kód (cikkszám)</label>
+            <input @bind="Code" class="@GetCodeInputClass()" />
+
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Code))
+            {
+                <p class="field-error">A kód kitöltése kötelező!</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(CodeError))
+            {
+                <p class="field-error">@CodeError</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Név (megnevezés)</label>
+            <input @bind="Name" class="@GetInputClass(Name)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Name))
+            {
+                <p class="field-error">A név kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Termékcsoport</label>
+            <select @bind="GroupId" class="@GetInputClass(GroupId)">
+                <option value="0">-- Válassz csoportot --</option>
+                @foreach (var g in Groups)
+                {
+                    <option value="@g.Id">@g.Name (@g.Id)</option>
+                }
+            </select>
+            @if (ShowErrors && GroupId == 0)
+            {
+                <p class="field-error">A termékcsoport kiválasztása kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Mértékegység</label>
+            <input @bind="Unit" class="@GetInputClass(Unit)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Unit))
+            {
+                <p class="field-error">A mértékegység kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="button-row">
+            <button class="save-btn" type="button" @onclick="Save">Mentés</button>
+            <button class="close-btn" type="button" @onclick="Close">Mégse</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ProductGroupItem> Groups { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<ProductItem> OnSave { get; set; }
+
+    // ✅ NEW: parent passes a db-check function (ProductService.CodeExistsAsync)
+    [Parameter] public Func<string, Task<bool>>? CodeExistsAsync { get; set; }
+
+    public bool ShowErrors { get; set; }
+
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public int GroupId { get; set; }
+    public string Unit { get; set; } = "";
+
+    public string? CodeError { get; set; }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private async Task Save()
+    {
+        ShowErrors = true;
+        CodeError = null;
+
+        if (string.IsNullOrWhiteSpace(Code) ||
+            string.IsNullOrWhiteSpace(Name) ||
+            string.IsNullOrWhiteSpace(Unit) ||
+            GroupId == 0)
+            return;
+
+
+        if (CodeExistsAsync != null)
+        {
+            var exists = await CodeExistsAsync(Code.Trim());
+            if (exists)
+            {
+                CodeError = "Már létezik ilyen kód!";
+                return;
+            }
+        }
+
+        await OnSave.InvokeAsync(new ProductItem
+        {
+            Code = Code.Trim(),
+            Name = Name.Trim(),
+            GroupId = GroupId,
+            Unit = Unit.Trim()
+        });
+    }
+
+    private string GetCodeInputClass()
+    {
+        if (!ShowErrors) return "";
+        if (!string.IsNullOrWhiteSpace(CodeError)) return "invalid-input";
+        if (string.IsNullOrWhiteSpace(Code)) return "invalid-input";
+        return "";
+    }
+
+    private string GetInputClass(object v)
+    {
+        if (!ShowErrors) return "";
+        if (v is string s && string.IsNullOrWhiteSpace(s)) return "invalid-input";
+        if (v is int i && i == 0) return "invalid-input";
+        return "";
+    }
+}

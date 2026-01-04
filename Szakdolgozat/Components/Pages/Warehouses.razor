@@ -1,0 +1,271 @@
+﻿@page "/warehouses"
+@using Szakdolgozat.Models
+@inject Services.UserSession Session
+@inject NavigationManager Nav
+@inject Services.WarehouseService WarehouseService
+@inject Services.LogService LogService
+@inject IHttpContextAccessor Http
+
+<h2>Raktárak</h2>
+
+@if (!Session.IsLoggedIn)
+{
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
+}
+else
+{
+    <div class="p-toolbar">
+        <input class="p-search"
+               placeholder="Keresés (kód, név, megye, város, cím, ID)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <button class="p-btn" type="button" @onclick="OpenAdd">Új raktár</button>
+        <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="p-error">@_error</p>
+    }
+    else if (_items.Count == 0)
+    {
+        <p>Nincs raktár.</p>
+    }
+    else
+    {
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:80px;">ID</th>
+                        <th style="width:140px;">Kód</th>
+                        <th style="width:220px;">Név</th>
+                        <th style="width:120px;">Automata</th>
+                        <th style="width:140px;">Megye</th>
+                        <th style="width:160px;">Város</th>
+                        <th>Cím</th>
+                        <th style="width:220px;">Kezelés</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var w in _items)
+                    {
+                        <tr>
+                            <td>@w.Id</td>
+                            <td title="@w.Code">@w.Code</td>
+                            <td title="@w.Name">@w.Name</td>
+                            <td>@(w.IsAutomaton ? "Igen" : "Nem")</td>
+                            <td title="@w.County">@w.County</td>
+                            <td title="@w.City">@w.City</td>
+                            <td title="@w.Address">@w.Address</td>
+                            <td>
+                                <button class="table-btn edit" type="button" @onclick="() => OpenEdit(w)">Módosítás</button>
+                                <button class="table-btn delete" type="button" @onclick="() => OpenDelete(w)">Törlés</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@if (_showAdd)
+{
+    <Szakdolgozat.Components.Modals.AddWarehouseModal OnClose="CloseAdd"
+                                                      OnSave="HandleAdd"
+                                                      CodeExistsAsync="WarehouseService.CodeExistsAsync" />
+}
+
+@if (_showEdit && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.EditWarehouseModal Warehouse="_selected"
+                                                       OnClose="CloseEdit"
+                                                       OnSave="HandleEdit"
+                                                       CodeExistsAsync="(code) => WarehouseService.CodeExistsForOtherAsync(_selected.Id, code)" />
+}
+
+@if (_showDelete && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.DeleteWarehouseModal Warehouse="_selected"
+                                                         OnClose="CloseDelete"
+                                                         OnDelete="HandleDelete" />
+}
+
+@code {
+    private bool _loading = true;
+    private string _error = "";
+
+    private string _search = "";
+    private CancellationTokenSource? _searchCts;
+
+    private List<Warehouse> _items = new();
+
+    private bool _showAdd;
+    private bool _showEdit;
+    private bool _showDelete;
+
+    private Warehouse? _selected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+        StateHasChanged();
+
+        try
+        {
+            _items = await WarehouseService.GetAllAsync(_search, take: 500);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _items = new();
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Reload() => LoadAsync();
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void OpenAdd()
+    {
+        _showAdd = true;
+        _showEdit = _showDelete = false;
+        _selected = null;
+    }
+
+    private void CloseAdd() => _showAdd = false;
+
+    private void OpenEdit(Warehouse w)
+    {
+        _selected = new Warehouse
+        {
+            Id = w.Id,
+            Code = w.Code,
+            Name = w.Name,
+            IsAutomaton = w.IsAutomaton,
+            County = w.County,
+            City = w.City,
+            Address = w.Address
+        };
+
+        _showEdit = true;
+        _showAdd = _showDelete = false;
+    }
+
+    private void CloseEdit() => _showEdit = false;
+
+    private void OpenDelete(Warehouse w)
+    {
+        _selected = new Warehouse
+        {
+            Id = w.Id,
+            Code = w.Code,
+            Name = w.Name,
+            IsAutomaton = w.IsAutomaton,
+            County = w.County,
+            City = w.City,
+            Address = w.Address
+        };
+
+        _showDelete = true;
+        _showAdd = _showEdit = false;
+    }
+
+    private void CloseDelete() => _showDelete = false;
+
+    private async Task HandleAdd(Warehouse w)
+    {
+        var id = await WarehouseService.CreateAsync(w);
+
+        await LogService.AddLogAsync(
+            Session.CurrentUser!.UserCode,
+            "CREATE_WAREHOUSE",
+            $"Új raktár: '{w.Name}' (ID={id}, Code={w.Code})",
+            page: "/warehouses",
+            entityName: "WAREHOUSES",
+            entityId: id.ToString(),
+            ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+        );
+
+        _showAdd = false;
+        await LoadAsync();
+    }
+
+    private async Task HandleEdit(Warehouse w)
+    {
+        var ok = await WarehouseService.UpdateAsync(w);
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "UPDATE_WAREHOUSE",
+                $"Raktár módosítva: '{w.Name}' (ID={w.Id}, Code={w.Code})",
+                page: "/warehouses",
+                entityName: "WAREHOUSES",
+                entityId: w.Id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+        }
+
+        _showEdit = false;
+        await LoadAsync();
+    }
+
+    private async Task HandleDelete(int id)
+    {
+        var name = _selected?.Name ?? "(unknown)";
+        var code = _selected?.Code ?? "(unknown)";
+
+        var ok = await WarehouseService.DeleteAsync(id);
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "DELETE_WAREHOUSE",
+                $"Raktár törölve: '{name}' (ID={id}, Code={code})",
+                page: "/warehouses",
+                entityName: "WAREHOUSES",
+                entityId: id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+        }
+
+        _showDelete = false;
+        await LoadAsync();
+    }
+}

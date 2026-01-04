@@ -3,6 +3,9 @@
 @inject Services.UserSession Session
 @inject NavigationManager Nav
 @layout AuthLayout
+@inject Services.LogService LogService
+@inject IHttpContextAccessor Http
+
 
 
 <div class="login-page">
@@ -50,7 +53,18 @@
         }
 
         Session.Login(user);
+
+        var ip = Http.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+        await LogService.AddLogAsync(
+            user.UserCode,
+            "LOGIN",
+            "User logged in",
+            page: "/login",
+            ipAddress: ip
+        );
+
         Nav.NavigateTo("/");
+
     }
 
     async Task HandleKey(KeyboardEventArgs e)

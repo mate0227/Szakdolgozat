@@ -16,7 +16,6 @@ public class LogService
     {
         await _connection.OpenAsync();
 
-        // simple search across username/action/type/text
         var sql = @"
             SELECT
                 l.id,

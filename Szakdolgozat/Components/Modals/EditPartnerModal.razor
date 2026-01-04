@@ -1,0 +1,167 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+        <h3>Partner módosítása</h3>
+
+        <div class="form-row">
+            <label>ID</label>
+            <input value="@Partner.Id" disabled />
+        </div>
+
+        <div class="form-row">
+            <label>Kód</label>
+            <input @bind="Partner.Code" class="@GetCodeInputClass()" />
+
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Partner.Code))
+            {
+                <p class="field-error">A kód kitöltése kötelező!</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(CodeError))
+            {
+                <p class="field-error">@CodeError</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Név</label>
+            <input @bind="Partner.Name" class="@GetInputClass(Partner.Name)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Partner.Name))
+            {
+                <p class="field-error">A név kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row checkbox-row">
+            <label>
+                <input type="checkbox" @bind="Partner.IsCustomer" />
+                Vevő
+            </label>
+            <label>
+                <input type="checkbox" @bind="Partner.IsSupplier" />
+                Szállító
+            </label>
+        </div>
+
+        <div class="form-row">
+            <label>Ország</label>
+            <input @bind="Partner.Country" class="@GetInputClass(Partner.Country)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Partner.Country))
+            {
+                <p class="field-error">Az ország kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Megye</label>
+            <input @bind="Partner.County" class="@GetInputClass(Partner.County)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Partner.County))
+            {
+                <p class="field-error">A megye kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Város</label>
+            <input @bind="Partner.City" class="@GetInputClass(Partner.City)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Partner.City))
+            {
+                <p class="field-error">A város kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Cím</label>
+            <input @bind="Partner.Address" class="@GetInputClass(Partner.Address)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Partner.Address))
+            {
+                <p class="field-error">A cím kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Email (opcionális)</label>
+            <input @bind="Partner.Email" />
+        </div>
+
+        <div class="form-row">
+            <label>Telefon (opcionális)</label>
+            <input @bind="Partner.Phone" />
+        </div>
+
+        <div class="form-row">
+            <label>Adószám (opcionális)</label>
+            <input @bind="Partner.TaxNumber" />
+        </div>
+
+        <div class="button-row">
+            <button class="save-btn" type="button" @onclick="Save">Mentés</button>
+            <button class="close-btn" type="button" @onclick="Close">Mégse</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Partner Partner { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<Partner> OnSave { get; set; }
+
+    // PartnerService.CodeExistsForOtherAsync(Partner.Id, code) passed from parent
+    [Parameter] public Func<string, Task<bool>>? CodeExistsAsync { get; set; }
+
+    public bool ShowErrors { get; set; }
+    public string? CodeError { get; set; }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private async Task Save()
+    {
+        ShowErrors = true;
+        CodeError = null;
+
+        if (string.IsNullOrWhiteSpace(Partner.Code) ||
+            string.IsNullOrWhiteSpace(Partner.Name) ||
+            string.IsNullOrWhiteSpace(Partner.Country) ||
+            string.IsNullOrWhiteSpace(Partner.County) ||
+            string.IsNullOrWhiteSpace(Partner.City) ||
+            string.IsNullOrWhiteSpace(Partner.Address))
+            return;
+
+        if (CodeExistsAsync != null)
+        {
+            var exists = await CodeExistsAsync(Partner.Code.Trim());
+            if (exists)
+            {
+                CodeError = "Már létezik ilyen kód!";
+                return;
+            }
+        }
+
+        Partner.Code = Partner.Code.Trim();
+        Partner.Name = Partner.Name.Trim();
+        Partner.Country = Partner.Country.Trim();
+        Partner.County = Partner.County.Trim();
+        Partner.City = Partner.City.Trim();
+        Partner.Address = Partner.Address.Trim();
+
+        if (!string.IsNullOrWhiteSpace(Partner.Email)) Partner.Email = Partner.Email.Trim();
+        if (!string.IsNullOrWhiteSpace(Partner.Phone)) Partner.Phone = Partner.Phone.Trim();
+        if (!string.IsNullOrWhiteSpace(Partner.TaxNumber)) Partner.TaxNumber = Partner.TaxNumber.Trim();
+
+        await OnSave.InvokeAsync(Partner);
+    }
+
+    private string GetCodeInputClass()
+    {
+        if (!ShowErrors) return "";
+        if (!string.IsNullOrWhiteSpace(CodeError)) return "invalid-input";
+        if (string.IsNullOrWhiteSpace(Partner.Code)) return "invalid-input";
+        return "";
+    }
+
+    private string GetInputClass(string v)
+    {
+        if (!ShowErrors) return "";
+        return string.IsNullOrWhiteSpace(v) ? "invalid-input" : "";
+    }
+}

@@ -1,0 +1,24 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+        <h3>Termék törlése</h3>
+
+        <p>Biztosan törölni szeretnéd ezt a terméket?</p>
+        <p><b>@Product.Name</b> (ID=@Product.Id, Kód=@Product.Code)</p>
+
+        <div class="button-row">
+            <button class="delete-btn" type="button" @onclick="Delete">Törlés</button>
+            <button class="close-btn" type="button" @onclick="Close">Mégse</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ProductItem Product { get; set; } = new(); 
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+
+    private Task Close() => OnClose.InvokeAsync();
+    private Task Delete() => OnDelete.InvokeAsync(Product.Id);
+}

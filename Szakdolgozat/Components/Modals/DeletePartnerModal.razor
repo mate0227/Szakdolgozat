@@ -1,0 +1,24 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+        <h3>Partner törlése</h3>
+
+        <p>Biztosan törölni szeretnéd ezt a partnert?</p>
+        <p><b>@Partner.Name</b> (ID=@Partner.Id, Kód=@Partner.Code)</p>
+
+        <div class="button-row">
+            <button class="delete-btn" type="button" @onclick="Delete">Törlés</button>
+            <button class="close-btn" type="button" @onclick="Close">Mégse</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Partner Partner { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+
+    private Task Close() => OnClose.InvokeAsync();
+    private Task Delete() => OnDelete.InvokeAsync(Partner.Id);
+}

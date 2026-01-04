@@ -1,0 +1,141 @@
+﻿@using Szakdolgozat.Models
+
+<div class="modal-overlay">
+    <div class="modal-window">
+        <h3>Raktár módosítása</h3>
+
+        <div class="form-row">
+            <label>ID</label>
+            <input value="@Warehouse.Id" disabled />
+        </div>
+
+        <div class="form-row">
+            <label>Kód</label>
+            <input @bind="Warehouse.Code" class="@GetCodeInputClass()" />
+
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Warehouse.Code))
+            {
+                <p class="field-error">A kód kitöltése kötelező!</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(CodeError))
+            {
+                <p class="field-error">@CodeError</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Név</label>
+            <input @bind="Warehouse.Name" class="@GetInputClass(Warehouse.Name)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Warehouse.Name))
+            {
+                <p class="field-error">A név kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row checkbox-row">
+            <label>
+                <input type="checkbox" @bind="Warehouse.IsAutomaton" />
+                Automata
+            </label>
+        </div>
+
+
+        <div class="form-row">
+            <label>Megye</label>
+            <input @bind="Warehouse.County" class="@GetInputClass(Warehouse.County)" />
+            @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.County))
+            {
+                <p class="field-error">Automatánál a megye kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Város</label>
+            <input @bind="Warehouse.City" class="@GetInputClass(Warehouse.City)" />
+            @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.City))
+            {
+                <p class="field-error">Automatánál a város kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Cím</label>
+            <input @bind="Warehouse.Address" class="@GetInputClass(Warehouse.Address)" />
+            @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.Address))
+            {
+                <p class="field-error">Automatánál a cím kötelező!</p>
+            }
+        </div>
+
+        <div class="button-row">
+            <button class="save-btn" type="button" @onclick="Save">Mentés</button>
+            <button class="close-btn" type="button" @onclick="Close">Mégse</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Warehouse Warehouse { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<Warehouse> OnSave { get; set; }
+
+    // parent passes a function that excludes this row:
+    // (code) => WarehouseService.CodeExistsForOtherAsync(Warehouse.Id, code)
+    [Parameter] public Func<string, Task<bool>>? CodeExistsAsync { get; set; }
+
+    public bool ShowErrors { get; set; }
+    public string? CodeError { get; set; }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private async Task Save()
+    {
+        ShowErrors = true;
+        CodeError = null;
+
+        var needsLocation = Warehouse.IsAutomaton;
+
+        if (string.IsNullOrWhiteSpace(Warehouse.Code) ||
+            string.IsNullOrWhiteSpace(Warehouse.Name) ||
+            (needsLocation && (
+                string.IsNullOrWhiteSpace(Warehouse.County) ||
+                string.IsNullOrWhiteSpace(Warehouse.City) ||
+                string.IsNullOrWhiteSpace(Warehouse.Address)
+            )))
+            return;
+
+
+        if (CodeExistsAsync != null)
+        {
+            var exists = await CodeExistsAsync(Warehouse.Code.Trim());
+            if (exists)
+            {
+                CodeError = "Már létezik ilyen kód!";
+                return;
+            }
+        }
+
+        Warehouse.Code = Warehouse.Code.Trim();
+        Warehouse.Name = Warehouse.Name.Trim();
+        Warehouse.County = Warehouse.County.Trim();
+        Warehouse.City = Warehouse.City.Trim();
+        Warehouse.Address = Warehouse.Address.Trim();
+
+        await OnSave.InvokeAsync(Warehouse);
+    }
+
+    private string GetCodeInputClass()
+    {
+        if (!ShowErrors) return "";
+        if (!string.IsNullOrWhiteSpace(CodeError)) return "invalid-input";
+        if (string.IsNullOrWhiteSpace(Warehouse.Code)) return "invalid-input";
+        return "";
+    }
+
+    private string GetInputClass(object v)
+    {
+        if (!ShowErrors) return "";
+        if (v is string s && string.IsNullOrWhiteSpace(s)) return "invalid-input";
+        return "";
+    }
+}

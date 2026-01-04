@@ -17,13 +17,13 @@
                 <button class="menu-btn" type="button">Törzsek ▾</button>
 
                 <div class="menu-panel @(ActiveMenu == "torzsek" ? "show" : "")">
-                    <a class="menu-item">Termékek</a>
-                    <a class="menu-item">Partnerek</a>
-                    <a class="menu-item">Termékcsoportok</a>
-                    <a class="menu-item">Raktárak</a>
-                    <a class="menu-item">Automaták, felhasználási helyek</a>
+                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/products")'>Termékek</a>
+                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/partners")'>Partnerek</a>
+                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/productgroups")'>Termékcsoportok</a>
+                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/warehouses")'>Raktárak</a>
                     <a class="menu-item">Eladási árak</a>
                 </div>
+
             </div>
 
             <div class="menu-dropdown"
@@ -73,8 +73,8 @@
                     <a class="dropdown-item" @onclick="OpenUserManagement">
                         Felhasználók kezelése
                     </a>
+                    <a class="dropdown-item" @onclick="GoToLogs">Logok</a>
                 }
-                <a class="dropdown-item" @onclick="GoToLogs">Logok</a>
                 <a class="dropdown-item" @onclick="Logout">Kijelentkezés</a>
             </div>
         </div>

@@ -36,6 +36,14 @@ builder.Services.AddScoped<UserTestService>();
 builder.Services.AddScoped<SimpleLoginService>();
 builder.Services.AddScoped<UserSession>();
 builder.Services.AddScoped<LogService>();
+builder.Services.AddScoped<ProductGroupService>();
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<WarehouseService>();
+builder.Services.AddScoped<PartnerService>();
+
+
+
+
 
 
 

@@ -1,0 +1,243 @@
+﻿@page "/products"
+@using Szakdolgozat.Models
+@inject Services.UserSession Session
+@inject NavigationManager Nav
+@inject Services.ProductService ProductService
+@inject Services.ProductGroupService ProductGroupService
+@inject Services.LogService LogService
+@inject IHttpContextAccessor Http
+
+<h2>Termékek</h2>
+
+@if (!Session.IsLoggedIn)
+{
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
+}
+else
+{
+    <div class="p-toolbar">
+        <input class="p-search"
+               placeholder="Keresés (kód, név, egység, csoport, ID)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <button class="p-btn" type="button" @onclick="OpenAdd">Új termék</button>
+        <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="p-error">@_error</p>
+    }
+    else if (_products.Count == 0)
+    {
+        <p>Nincs termék.</p>
+    }
+    else
+    {
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:90px;">ID</th>
+                        <th style="width:140px;">Kód</th>
+                        <th>Név</th>
+                        <th style="width:220px;">Csoport</th>
+                        <th style="width:120px;">Egység</th>
+                        <th style="width:220px;">Kezelés</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in _products)
+                    {
+                        <tr>
+                            <td>@p.Id</td>
+                            <td title="@p.Code">@p.Code</td>
+                            <td title="@p.Name">@p.Name</td>
+                            <td title="@($"{p.GroupName} ({p.GroupId})")">@p.GroupName (@p.GroupId)</td>
+                            <td title="@p.Unit">@p.Unit</td>
+                            <td>
+                                <button class="table-btn edit" type="button" @onclick="() => OpenEdit(p)">Módosítás</button>
+                                <button class="table-btn delete" type="button" @onclick="() => OpenDelete(p)">Törlés</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@if (_showAdd)
+{
+    <Szakdolgozat.Components.Modals.AddProductModal Groups="_groups"
+                                                    OnClose="CloseAdd"
+                                                    OnSave="HandleAdd"
+                                                    CodeExistsAsync="ProductService.CodeExistsAsync" />
+}
+
+
+@if (_showEdit && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.EditProductModal Product="_selected"
+                                                    Groups="_groups"
+                                                    OnClose="CloseEdit"
+                                                    OnSave="HandleEdit"
+                                                    CodeExistsAsync="ProductService.CodeExistsAsync" />
+}
+
+@if (_showDelete && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.DeleteProductModal Product="_selected"
+                                                      OnClose="CloseDelete"
+                                                      OnDelete="HandleDelete" />
+}
+
+@code {
+    private bool _loading = true;
+    private string _error = "";
+
+    private string _search = "";
+    private CancellationTokenSource? _searchCts;
+
+    private List<ProductItem> _products = new();
+    private List<ProductGroupItem> _groups = new();
+
+    private bool _showAdd;
+    private bool _showEdit;
+    private bool _showDelete;
+
+    private ProductItem? _selected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        await LoadGroupsAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadGroupsAsync()
+    {
+        // so dropdowns have data
+        _groups = await ProductGroupService.GetAllAsync(search: null);
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+        StateHasChanged();
+
+        try
+        {
+            _products = await ProductService.GetAllAsync(_search, take: 500);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _products = new();
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Reload() => LoadAsync();
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void OpenAdd() { _showAdd = true; _showEdit = _showDelete = false; _selected = null; }
+    private void CloseAdd() => _showAdd = false;
+
+    private void OpenEdit(ProductItem p) { _selected = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit }; _showEdit = true; _showAdd = _showDelete = false; }
+    private void CloseEdit() => _showEdit = false;
+
+    private void OpenDelete(ProductItem p) { _selected = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit }; _showDelete = true; _showAdd = _showEdit = false; }
+    private void CloseDelete() => _showDelete = false;
+
+    private async Task HandleAdd(ProductItem p)
+    {
+        // create
+        var id = await ProductService.CreateAsync(p.Code, p.Name, p.GroupId, p.Unit);
+
+        // log
+        await LogService.AddLogAsync(
+            Session.CurrentUser!.UserCode,
+            "CREATE_PRODUCT",
+            $"Új termék: '{p.Name}' (ID={id}, Code={p.Code}, GroupId={p.GroupId}, Unit={p.Unit})",
+            page: "/products",
+            entityName: "PRODUCTS",
+            entityId: id.ToString(),
+            ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+        );
+
+        _showAdd = false;
+        await LoadAsync();
+    }
+
+    private async Task HandleEdit(ProductItem p)
+    {
+        var ok = await ProductService.UpdateAsync(p.Id, p.Code, p.Name, p.GroupId, p.Unit);
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "UPDATE_PRODUCT",
+                $"Termék módosítva: '{p.Name}' (ID={p.Id}, Code={p.Code}, GroupId={p.GroupId}, Unit={p.Unit})",
+                page: "/products",
+                entityName: "PRODUCTS",
+                entityId: p.Id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+        }
+
+        _showEdit = false;
+        await LoadAsync();
+    }
+
+    private async Task HandleDelete(int id)
+    {
+        var name = _selected?.Name ?? "(unknown)";
+        var code = _selected?.Code ?? "(unknown)";
+
+        var ok = await ProductService.DeleteAsync(id);
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "DELETE_PRODUCT",
+                $"Termék törölve: '{name}' (ID={id}, Code={code})",
+                page: "/products",
+                entityName: "PRODUCTS",
+                entityId: id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+        }
+
+        _showDelete = false;
+        await LoadAsync();
+    }
+}

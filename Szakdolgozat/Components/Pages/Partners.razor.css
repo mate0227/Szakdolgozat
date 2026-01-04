@@ -1,0 +1,144 @@
+﻿/* =========================
+   TOOLBAR
+   ========================= */
+
+.p-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 14px 0 18px;
+}
+
+.p-search {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #d6d6d6;
+}
+
+.p-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #3b6bff;
+    color: white;
+    font-weight: 600;
+}
+
+    .p-btn.secondary {
+        background: rgba(36,58,99,0.10);
+        color: #243a63;
+    }
+
+    .p-btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+
+.p-error {
+    color: #b00020;
+}
+
+/* =========================
+   SPLIT TABLE LAYOUT
+   ========================= */
+
+.p-table-split {
+    display: flex;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+    overflow: hidden; /* looks like one component */
+}
+
+/* LEFT: scrollable data table */
+.p-table-scroll {
+    flex: 1;
+    overflow: auto; /* horizontal + vertical scroll */
+}
+
+/* RIGHT: fixed action column */
+.p-table-actions {
+    width: 220px;
+    flex: 0 0 220px;
+    border-left: 1px solid rgba(0,0,0,0.08);
+    background: #ffffff;
+}
+
+/* =========================
+   TABLES
+   ========================= */
+
+/* LEFT table */
+.p-table {
+    width: 100%;
+    min-width: 1500px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+/* RIGHT actions table */
+.p-actions-table {
+    width: 220px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+    /* Shared cell styling */
+    .p-table th,
+    .p-table td,
+    .p-actions-table th,
+    .p-actions-table td {
+        padding: 10px;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        text-align: left;
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .p-table td {
+        padding-top: 16px;
+        padding-bottom: 16px;
+    }
+
+
+    /* Sticky headers in BOTH tables */
+    .p-table th,
+    .p-actions-table th {
+        background: rgba(255,255,255,0.9);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    /* Ensure action column stays visually separate */
+    .p-actions-table th,
+    .p-actions-table td {
+        background: #ffffff;
+        text-align: center;
+    }
+
+/* =========================
+   ACTION BUTTONS
+   ========================= */
+
+.table-btn {
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+    .table-btn.edit {
+        background: rgba(59,107,255,0.15);
+        color: #243a63;
+    }
+
+    .table-btn.delete {
+        background: rgba(255,0,0,0.10);
+        color: #a00000;
+    }

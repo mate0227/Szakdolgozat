@@ -1,4 +1,5 @@
 ﻿@page "/logs"
+@using Szakdolgozat.Models
 @inject Services.UserSession Session
 @inject NavigationManager Nav
 @inject Services.LogService LogService
@@ -18,10 +19,10 @@ else
     <div class="logs-toolbar">
         <input class="logs-search"
                placeholder="Keresés (felhasználó, action, szöveg, oldal)..."
-               @bind="_search"
-               @bind:event="oninput" />
+               value="@_search"
+               @oninput="OnSearchInput" />
 
-        <button class="logs-btn" @onclick="Reload">Frissítés</button>
+        <button class="logs-btn" @onclick="Reload" disabled="@_loading">Frissítés</button>
     </div>
 
     @if (_loading)
@@ -56,7 +57,7 @@ else
                             <td>@l.ActionType</td>
                             <td>@l.ActionText</td>
                             <td>@l.Page</td>
-                            <td>@(l.EntityName is null ? "" : $"{l.EntityName}:{l.EntityId}")</td>
+                            <td>@(string.IsNullOrWhiteSpace(l.EntityName) ? "" : $"{l.EntityName}:{l.EntityId}")</td>
                             <td>@l.IpAddress</td>
                         </tr>
                     }
@@ -69,21 +70,42 @@ else
 @code {
     private bool _loading = true;
     private string _search = "";
-    private List<Szakdolgozat.Models.UserLogEntry> _logs = new();
+    private List<UserLogEntry> _logs = new();
+
+    private CancellationTokenSource? _searchCts;
 
     protected override async Task OnInitializedAsync()
     {
         if (!Session.IsLoggedIn)
         {
-            Nav.NavigateTo("/login", true);
+            Nav.NavigateTo("/login");
             return;
         }
 
-        // Admin only page
         if (Session.CurrentUser?.RoleName != "Admin")
             return;
 
         await LoadAsync();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        // debounce so we don't hit DB every keystroke
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(300, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException)
+        {
+
+        }
     }
 
     private async Task LoadAsync()
@@ -94,7 +116,14 @@ else
         _logs = await LogService.GetLogsAsync(take: 200, search: _search);
 
         _loading = false;
+        StateHasChanged();
     }
 
-    private async Task Reload() => await LoadAsync();
+    private Task Reload() => LoadAsync();
+
+    public void Dispose()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+    }
 }

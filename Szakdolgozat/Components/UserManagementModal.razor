@@ -1,6 +1,9 @@
 ﻿@inject Services.SimpleLoginService LoginService
 @using Szakdolgozat.Models
 @inject Services.UserSession Session
+@inject Services.LogService LogService
+@inject NavigationManager Nav
+@inject IHttpContextAccessor Http
 
 
 <div class="modal-overlay">
@@ -122,11 +125,22 @@
 
         if (ok)
         {
-            // Reload the list
+            var ip = Http.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "CREATE_USER",
+                $"Új felhasználó: '{model.Username}' (RoleId={model.RoleId})",
+                page: "/" + Nav.ToBaseRelativePath(Nav.Uri),
+                entityName: "USERS",
+                entityId: null,
+                ipAddress: ip
+            );
+
             users = await LoginService.GetAllUsersAsync();
-            ShowAdd = false; // close modal
+            ShowAdd = false;
         }
     }
+
 
     void OpenEdit(User user)
     {
@@ -144,10 +158,22 @@
 
         if (ok)
         {
+            var ip = Http.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "UPDATE_USER",
+                $"Felhasználó módosítva: '{model.Username}' (UserCode={model.UserCode}, RoleId={model.RoleId})",
+                page: "/" + Nav.ToBaseRelativePath(Nav.Uri),
+                entityName: "USERS",
+                entityId: model.UserCode.ToString(),
+                ipAddress: ip
+            );
+
             users = await LoginService.GetAllUsersAsync();
             ShowEdit = false;
         }
     }
+
 
 
     void OpenDelete(User user)
@@ -158,13 +184,28 @@
 
     async Task HandleDeleteUser(int userCode)
     {
+        var username = SelectedUser?.Username ?? "(unknown)";
+        var ip = Http.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+
         bool ok = await LoginService.DeleteUserAsync(userCode);
 
         if (ok)
         {
-            users = await LoginService.GetAllUsersAsync(); // refresh user list
-            ShowDelete = false; // close modal
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "DELETE_USER",
+                $"Deleted user '{username}' (UserCode={userCode})",
+                page: "/" + Nav.ToBaseRelativePath(Nav.Uri),
+                entityName: "USERS",
+                entityId: userCode.ToString(),
+                ipAddress: ip
+            );
+
+            users = await LoginService.GetAllUsersAsync();
+            ShowDelete = false;
         }
     }
+
+
 
 }

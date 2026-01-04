@@ -1,0 +1,306 @@
+﻿@page "/partners"
+@using Szakdolgozat.Models
+@inject Services.UserSession Session
+@inject NavigationManager Nav
+@inject Services.PartnerService PartnerService
+@inject Services.LogService LogService
+@inject IHttpContextAccessor Http
+
+<h2>Partnerek</h2>
+
+@if (!Session.IsLoggedIn)
+{
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
+}
+else
+{
+    <div class="p-toolbar">
+        <input class="p-search"
+               placeholder="Keresés (kód, név, ország, megye, város, cím, email, telefon, ID)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <button class="p-btn" type="button" @onclick="OpenAdd">Új partner</button>
+        <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="p-error">@_error</p>
+    }
+    else if (_items.Count == 0)
+    {
+        <p>Nincs partner.</p>
+    }
+    else
+    {
+        <div class="p-table-split">
+            <!-- LEFT: scrollable data -->
+            <div class="p-table-scroll">
+                <table class="p-table">
+                    <thead>
+                        <tr>
+                            <th style="width:80px;">ID</th>
+                            <th style="width:120px;">Kód</th>
+                            <th style="width:220px;">Név</th>
+                            <th style="width:120px;">Vevő</th>
+                            <th style="width:120px;">Szállító</th>
+                            <th style="width:120px;">Ország</th>
+                            <th style="width:140px;">Megye</th>
+                            <th style="width:160px;">Város</th>
+                            <th>Cím</th>
+                            <th style="width:200px;">Email</th>
+                            <th style="width:140px;">Telefon</th>
+                            <th style="width:140px;">Adószám</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in _items)
+                        {
+                            <tr>
+                                <td>@p.Id</td>
+                                <td title="@p.Code">@p.Code</td>
+                                <td title="@p.Name">@p.Name</td>
+                                <td>@(p.IsCustomer ? "Igen" : "Nem")</td>
+                                <td>@(p.IsSupplier ? "Igen" : "Nem")</td>
+                                <td title="@p.Country">@p.Country</td>
+                                <td title="@p.County">@p.County</td>
+                                <td title="@p.City">@p.City</td>
+                                <td title="@p.Address">@p.Address</td>
+                                <td title="@p.Email">@p.Email</td>
+                                <td title="@p.Phone">@p.Phone</td>
+                                <td title="@p.TaxNumber">@p.TaxNumber</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- RIGHT: fixed action column -->
+            <div class="p-table-actions">
+                <table class="p-actions-table">
+                    <thead>
+                        <tr>
+                            <th style="width:220px;">Kezelés</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in _items)
+                        {
+                            <tr>
+                                <td>
+                                    <button class="table-btn edit" type="button" @onclick="() => OpenEdit(p)">Módosítás</button>
+                                    <button class="table-btn delete" type="button" @onclick="() => OpenDelete(p)">Törlés</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    }
+}
+
+@if (_showAdd)
+{
+    <Szakdolgozat.Components.Modals.AddPartnerModal
+        OnClose="CloseAdd"
+        OnSave="HandleAdd"
+        CodeExistsAsync="PartnerService.CodeExistsAsync" />
+}
+
+@if (_showEdit && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.EditPartnerModal
+        Partner="_selected"
+        OnClose="CloseEdit"
+        OnSave="HandleEdit"
+        CodeExistsAsync="(code) => PartnerService.CodeExistsForOtherAsync(_selected.Id, code)" />
+}
+
+@if (_showDelete && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.DeletePartnerModal
+        Partner="_selected"
+        OnClose="CloseDelete"
+        OnDelete="HandleDelete" />
+}
+
+@code {
+    private bool _loading = true;
+    private string _error = "";
+
+    private string _search = "";
+    private CancellationTokenSource? _searchCts;
+
+    private List<Partner> _items = new();
+
+    private bool _showAdd;
+    private bool _showEdit;
+    private bool _showDelete;
+
+    private Partner? _selected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+        StateHasChanged();
+
+        try
+        {
+            _items = await PartnerService.GetAllAsync(_search, take: 500);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _items = new();
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Reload() => LoadAsync();
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void OpenAdd()
+    {
+        _showAdd = true;
+        _showEdit = _showDelete = false;
+        _selected = null;
+    }
+
+    private void CloseAdd() => _showAdd = false;
+
+    private void OpenEdit(Partner p)
+    {
+        _selected = new Partner
+        {
+            Id = p.Id,
+            Code = p.Code,
+            Name = p.Name,
+            IsCustomer = p.IsCustomer,
+            IsSupplier = p.IsSupplier,
+            Country = p.Country,
+            County = p.County,
+            City = p.City,
+            Address = p.Address,
+            Email = p.Email,
+            Phone = p.Phone,
+            TaxNumber = p.TaxNumber
+        };
+
+        _showEdit = true;
+        _showAdd = _showDelete = false;
+    }
+
+    private void CloseEdit() => _showEdit = false;
+
+    private void OpenDelete(Partner p)
+    {
+        _selected = new Partner
+        {
+            Id = p.Id,
+            Code = p.Code,
+            Name = p.Name
+        };
+
+        _showDelete = true;
+        _showAdd = _showEdit = false;
+    }
+
+    private void CloseDelete() => _showDelete = false;
+
+    private async Task HandleAdd(Partner p)
+    {
+        var id = await PartnerService.CreateAsync(p);
+
+        await LogService.AddLogAsync(
+            Session.CurrentUser!.UserCode,
+            "CREATE_PARTNER",
+            $"Új partner: '{p.Name}' (ID={id}, Code={p.Code})",
+            page: "/partners",
+            entityName: "PARTNERS",
+            entityId: id.ToString(),
+            ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+        );
+
+        _showAdd = false;
+        await LoadAsync();
+    }
+
+    private async Task HandleEdit(Partner p)
+    {
+        var ok = await PartnerService.UpdateAsync(p);
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "UPDATE_PARTNER",
+                $"Partner módosítva: '{p.Name}' (ID={p.Id}, Code={p.Code})",
+                page: "/partners",
+                entityName: "PARTNERS",
+                entityId: p.Id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+        }
+
+        _showEdit = false;
+        await LoadAsync();
+    }
+
+    private async Task HandleDelete(int id)
+    {
+        var name = _selected?.Name ?? "(unknown)";
+        var code = _selected?.Code ?? "(unknown)";
+
+        var ok = await PartnerService.DeleteAsync(id);
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "DELETE_PARTNER",
+                $"Partner törölve: '{name}' (ID={id}, Code={code})",
+                page: "/partners",
+                entityName: "PARTNERS",
+                entityId: id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+        }
+
+        _showDelete = false;
+        await LoadAsync();
+    }
+}

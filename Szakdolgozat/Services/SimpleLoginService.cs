@@ -88,7 +88,6 @@ public class SimpleLoginService
     {
         await _connection.OpenAsync();
 
-        // Hash the password using BCrypt
         string hashed = BCrypt.Net.BCrypt.HashPassword(password);
 
         var cmd = new FbCommand(@"

@@ -1,0 +1,206 @@
+﻿@page "/productgroups"
+@using Szakdolgozat.Models
+@inject Services.UserSession Session
+@inject NavigationManager Nav
+@inject Services.ProductGroupService ProductGroupService
+@inject Services.LogService LogService
+@inject IHttpContextAccessor Http
+
+
+
+<h2>Termékcsoportok</h2>
+
+@if (!Session.IsLoggedIn)
+{
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
+}
+else
+{
+    <div class="pg-toolbar">
+        <input class="pg-search"
+               placeholder="Keresés (név vagy ID)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <button class="pg-btn" @onclick="OpenAdd" type="button">Új csoport</button>
+        <button class="pg-btn secondary" @onclick="Reload" type="button" disabled="@_loading">Frissítés</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (_groups.Count == 0)
+    {
+        <p>Nincs termékcsoport.</p>
+    }
+    else
+    {
+        <div class="pg-table-wrap">
+            <table class="pg-table">
+                <thead>
+                    <tr>
+                        <th style="width:120px;">ID</th>
+                        <th>Név</th>
+                        <th style="width:220px;">Kezelés</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var g in _groups)
+                    {
+                        <tr>
+                            <td>@g.Id</td>
+                            <td title="@g.Name">@g.Name</td>
+                            <td>
+                                <button class="table-btn edit" @onclick="() => OpenEdit(g)" type="button">Módosítás</button>
+                                <button class="table-btn delete" @onclick="() => OpenDelete(g)" type="button">Törlés</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@if (_showAdd)
+{
+    <Szakdolgozat.Components.Modals.AddProductGroupModal OnClose="CloseAdd" OnSave="HandleAdd" />
+}
+
+@if (_showEdit && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.EditProductGroupModal Group="_selected" OnClose="CloseEdit" OnSave="HandleEdit" />
+}
+
+@if (_showDelete && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.DeleteProductGroupModal Group="_selected" OnClose="CloseDelete" OnDelete="HandleDelete" />
+}
+
+@code {
+    private bool _loading = true;
+
+    private string _search = "";
+    private CancellationTokenSource? _searchCts;
+
+    private List<ProductGroupItem> _groups = new();
+
+    private bool _showAdd;
+    private bool _showEdit;
+    private bool _showDelete;
+
+    private ProductGroupItem? _selected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        _groups = await ProductGroupService.GetAllAsync(_search);
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Reload() => LoadAsync();
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void OpenAdd() => _showAdd = true;
+    private void CloseAdd() => _showAdd = false;
+
+    private void OpenEdit(ProductGroupItem g) { _selected = g; _showEdit = true; }
+    private void CloseEdit() => _showEdit = false;
+
+    private void OpenDelete(ProductGroupItem g) { _selected = g; _showDelete = true; }
+    private void CloseDelete() => _showDelete = false;
+
+    private async Task HandleAdd(string name)
+    {
+        var id = await ProductGroupService.CreateAsync(name);
+        if (id is not null)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "CREATE_PRODUCT_GROUP",
+                $"Termékcsoport létrehozva: '{name}' (ID={id})",
+                page: "/productgroups",
+                entityName: "PRODUCT_GROUPS",
+                entityId: id.Value.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+
+            _showAdd = false;
+            await LoadAsync();
+        }
+    }
+
+    private async Task HandleEdit(ProductGroupItem edited)
+    {
+        var ok = await ProductGroupService.UpdateAsync(edited.Id, edited.Name);
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "UPDATE_PRODUCT_GROUP",
+                $"Termékcsoport módosítva: '{edited.Name}' (ID={edited.Id})",
+                page: "/productgroups",
+                entityName: "PRODUCT_GROUPS",
+                entityId: edited.Id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+
+            _showEdit = false;
+            await LoadAsync();
+        }
+    }
+
+    private async Task HandleDelete(int id)
+    {
+        // keep name in log before delete
+        var name = _selected?.Name ?? "(unknown)";
+
+        var ok = await ProductGroupService.DeleteAsync(id);
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "DELETE_PRODUCT_GROUP",
+                $"Termékcsoport törölve: '{name}' (ID={id})",
+                page: "/productgroups",
+                entityName: "PRODUCT_GROUPS",
+                entityId: id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+
+            _showDelete = false;
+            await LoadAsync();
+        }
+    }
+}
