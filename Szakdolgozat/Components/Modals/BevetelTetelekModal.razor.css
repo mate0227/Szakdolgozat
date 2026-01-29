@@ -1,0 +1,162 @@
+﻿.bt-window {
+    width: min(1200px, calc(100vw - 32px));
+}
+
+.bt-header {
+    margin-bottom: 10px;
+}
+
+.bt-sub {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-top: 4px;
+}
+
+.bt-error {
+    color: #b00020;
+    margin: 8px 0;
+}
+
+.bt-form {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    padding: 12px;
+    margin: 12px 0 14px;
+}
+
+.bt-form-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 1000px) {
+    .bt-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.bt-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.bt-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #3b6bff;
+    color: white;
+    font-weight: 700;
+}
+
+    .bt-btn.secondary {
+        background: rgba(36,58,99,0.10);
+        color: #243a63;
+    }
+
+    .bt-btn.danger {
+        background: rgba(255,0,0,0.10);
+        color: #a00000;
+    }
+
+    .bt-btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+
+/* table */
+.bt-table-wrap {
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.bt-table {
+    width: 100%;
+    min-width: 1200px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+    .bt-table th,
+    .bt-table td {
+        padding: 10px;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        text-align: left;
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .bt-table th {
+        background: rgba(255,255,255,0.9);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+/* selection */
+.row-selected {
+    background: rgba(59,107,255,0.10);
+}
+
+/* form row styles */
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .form-row label {
+        font-weight: 700;
+    }
+
+    .form-row input,
+    .form-row select {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.2);
+    }
+
+        .form-row input:disabled,
+        .form-row select:disabled {
+            background: rgba(0,0,0,0.05);
+        }
+
+.invalid-input {
+    border-color: #dc2626;
+    background: rgba(220,38,38,0.08);
+}
+
+.field-error {
+    color: #b00020;
+    font-size: 13px;
+    margin: 0;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-window {
+    width: min(1100px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 18px 18px 18px 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.30);
+}
+

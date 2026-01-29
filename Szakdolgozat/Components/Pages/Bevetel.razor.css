@@ -1,0 +1,93 @@
+﻿/* =========================
+   TOOLBAR
+   ========================= */
+
+.p-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 14px 0 18px;
+}
+
+.p-search {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #d6d6d6;
+}
+
+.p-btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #3b6bff;
+    color: white;
+    font-weight: 600;
+}
+
+    .p-btn.secondary {
+        background: rgba(36,58,99,0.10);
+        color: #243a63;
+    }
+
+    .p-btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+
+.p-error {
+    color: #b00020;
+}
+
+/* =========================
+   TABLE
+   ========================= */
+
+.p-table-wrap {
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.p-table {
+    width: 100%;
+    min-width: 1900px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+    .p-table th,
+    .p-table td {
+        padding: 10px;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        text-align: left;
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .p-table td {
+        padding-top: 16px;
+        padding-bottom: 16px;
+    }
+
+    .p-table th {
+        background: rgba(255,255,255,0.9);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+/* =========================
+   ROW SELECT
+   ========================= */
+
+.row-selected td {
+    background: rgba(59,107,255,0.10);
+}
+
+.p-table tbody tr:hover td {
+    background: rgba(0,0,0,0.03);
+}

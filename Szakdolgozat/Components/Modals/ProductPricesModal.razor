@@ -1,0 +1,441 @@
+﻿@using Szakdolgozat.Models
+@using System.Globalization
+@inject Services.ProductPriceService ProductPriceService
+@inject Services.VatService VatService
+@inject IJSRuntime JS
+
+<div class="modal-overlay">
+    <div class="modal-window">
+        <div class="pp-header">
+            <h3>Eladási árak</h3>
+            <div class="pp-sub">
+                Termék: <b>@Product.Name</b> (ID=@Product.Id, Kód=@Product.Code)
+            </div>
+        </div>
+
+        @if (_loading)
+        {
+            <p>Betöltés...</p>
+        }
+        else if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <p class="pp-error">@_error</p>
+        }
+        else
+        {
+            <div class="pp-form">
+                <div class="pp-form-title">Új ár</div>
+
+                <!-- ROW 1: ÁFA, From, To -->
+                <div class="pp-grid">
+                    <div class="form-row">
+                        <label>ÁFA</label>
+                        <select class="@GetInputClass(_vatId == 0)"
+                                value="@_vatId"
+                                @onchange="OnVatChanged">
+                            <option value="0">-- Válassz ÁFÁt --</option>
+                            @foreach (var v in _vats)
+                            {
+                                <option value="@v.Id">@v.Name (@v.Code)</option>
+                            }
+                        </select>
+                        @if (_showErrors && _vatId == 0)
+                        {
+                            <p class="field-error">ÁFA kiválasztása kötelező!</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <label>Érvényes -tól (kötelező)</label>
+                        <input class="@GetInputClass(_validFrom is null)"
+                               type="date"
+                               value="@(_validFrom is null ? "" : _validFrom.Value.ToString("yyyy-MM-dd"))"
+                               @onchange="OnValidFromChanged" />
+                        @if (_showErrors && _validFrom is null)
+                        {
+                            <p class="field-error">Érvényes -tól megadása kötelező!</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <label>Érvényes -ig (opcionális)</label>
+                        <input type="date"
+                               value="@(_validTo is null ? "" : _validTo.Value.ToString("yyyy-MM-dd"))"
+                               @onchange="OnValidToChanged" />
+                    </div>
+                </div>
+
+                <!-- ROW 2: Net, Gross, Currency -->
+                <div class="pp-grid">
+                    <div class="form-row">
+                        <label>Nettó ár</label>
+                        <input class="@GetInputClass(_netPrice <= 0)"
+                               type="number"
+                               step="0.01"
+                               value="@_netPrice.ToString(CultureInfo.InvariantCulture)"
+                               @oninput="OnNetChanged" />
+                        @if (_showErrors && _netPrice <= 0)
+                        {
+                            <p class="field-error">Nettó ár kötelező!</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <label>Bruttó ár</label>
+                        <input class="@GetInputClass(_grossPrice <= 0)"
+                               type="number"
+                               step="0.01"
+                               value="@_grossPrice.ToString(CultureInfo.InvariantCulture)"
+                               @oninput="OnGrossChanged" />
+                        @if (_showErrors && _grossPrice <= 0)
+                        {
+                            <p class="field-error">Bruttó ár kötelező!</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <label>Pénznem</label>
+                        <select class="@GetInputClass(string.IsNullOrWhiteSpace(_currency))"
+                                value="@_currency"
+                                @onchange="OnCurrencyChanged">
+                            <option value="">-- Válassz pénznemet --</option>
+                            <option value="HUF">HUF</option>
+                            <option value="EUR">EUR</option>
+                            <option value="USD">USD</option>
+                        </select>
+                        @if (_showErrors && string.IsNullOrWhiteSpace(_currency))
+                        {
+                            <p class="field-error">Pénznem kiválasztása kötelező!</p>
+                        }
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_formError))
+                {
+                    <p class="pp-error">@_formError</p>
+                }
+
+                <div class="pp-form-actions">
+                    <button class="save-btn" type="button" @onclick="Create">Mentés (új ár)</button>
+
+                    <button class="delete-btn"
+                            type="button"
+                            disabled="@(_selectedId is null)"
+                            title="@(_selectedId is null ? "Válassz ki egy sort a törléshez!" : "")"
+                            @onclick="DeleteSelected">
+                        Törlés
+                    </button>
+
+                    <button class="close-btn" type="button" @onclick="ResetForm">Űrlap törlése</button>
+                </div>
+            </div>
+
+            <!-- ONE TABLE, click rows to select -->
+            <div class="pp-table-wrap">
+                <table class="pp-table">
+                    <thead>
+                        <tr>
+                            <th style="width:70px;">ID</th>
+                            <th style="width:150px;">Nettó ár</th>
+                            <th style="width:150px;">Bruttó ár</th>
+                            <th style="width:80px;">Valuta</th>
+                            <th style="width:170px;">ÁFA</th>
+                            <th style="width:140px;">Érvényes -tól</th>
+                            <th style="width:140px;">Érvényes -ig</th>
+                            <th style="width:160px;">Létrehozva</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (_prices.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="8">Nincs ár rögzítve ehhez a termékhez.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var row in _prices)
+                            {
+                                var isActive = row.ValidTo is null;
+                                var isSelected = _selectedId == row.Id;
+
+                                <tr class="@GetRowClass(isActive, isSelected)"
+                                    role="button"
+                                    title="Kattints a kijelöléshez"
+                                    @onclick="() => SelectRow(row.Id)">
+                                    <td>@row.Id</td>
+                                    <td>@row.NetPrice.ToString("0.00")</td>
+                                    <td>@row.GrossPrice.ToString("0.00")</td>
+                                    <td>@row.Currency</td>
+                                    <td title="@row.VatName">@row.VatName (@row.VatCode)</td>
+                                    <td>@row.ValidFrom.ToString("yyyy-MM-dd")</td>
+                                    <td>@(row.ValidTo is null ? "" : row.ValidTo.Value.ToString("yyyy-MM-dd"))</td>
+                                    <td>@row.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="button-row">
+            <button class="close-btn" type="button" @onclick="Close">Bezárás</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ProductItem Product { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _loading = true;
+    private string _error = "";
+
+    private List<ProductPriceItem> _prices = new();
+    private List<VatItem> _vats = new();
+
+    // form
+    private int _vatId;
+    private decimal _netPrice;
+    private decimal _grossPrice;
+    private string _currency = "";
+    private DateTime? _validFrom;
+    private DateTime? _validTo;
+
+    private bool _showErrors;
+    private string? _formError;
+
+    // selection
+    private int? _selectedId;
+
+    private enum LastEdited { None, Net, Gross }
+    private LastEdited _lastEdited = LastEdited.None;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+        _formError = null;
+        StateHasChanged();
+
+        try
+        {
+            _vats = await VatService.GetAllAsync();
+            _prices = await ProductPriceService.GetByProductAsync(Product.Id);
+
+            // if selected row was deleted/changed, keep selection consistent
+            if (_selectedId is not null && !_prices.Any(p => p.Id == _selectedId.Value))
+                _selectedId = null;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private void ResetForm()
+    {
+        _vatId = 0;
+        _netPrice = 0;
+        _grossPrice = 0;
+        _currency = "";
+        _validFrom = null;
+        _validTo = null;
+
+        _showErrors = false;
+        _formError = null;
+        _lastEdited = LastEdited.None;
+        // selection stays as-is (so user can delete without losing selection)
+    }
+
+    private void SelectRow(int id)
+    {
+        _selectedId = (_selectedId == id) ? null : id; // toggle
+    }
+
+    private async Task DeleteSelected()
+    {
+        if (_selectedId is null) return;
+
+        var id = _selectedId.Value;
+        var ok = await JS.InvokeAsync<bool>("confirm", $"Biztosan törlöd az árat? (ID={id})");
+        if (!ok) return;
+
+        try
+        {
+            await ProductPriceService.DeleteAsync(id);
+            _selectedId = null;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _formError = ex.Message;
+        }
+    }
+
+    private async Task Create()
+    {
+        _showErrors = true;
+        _formError = null;
+
+        if (!ValidateForm()) return;
+
+        try
+        {
+            var vf = _validFrom!.Value.Date;
+            var vt = _validTo?.Date;
+
+            await ProductPriceService.CreateAsync(
+                productId: Product.Id,
+                vatId: _vatId,
+                netPrice: _netPrice,
+                grossPrice: _grossPrice,
+                currency: _currency,
+                validFrom: vf,
+                validTo: vt,
+                closePreviousActive: true
+            );
+
+            ResetForm();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _formError = ex.Message;
+        }
+    }
+
+    private bool ValidateForm()
+    {
+        if (_vatId == 0) return false;
+        if (string.IsNullOrWhiteSpace(_currency)) return false;
+        if (_netPrice <= 0) return false;
+        if (_grossPrice <= 0) return false;
+        if (_validFrom is null) return false;
+
+        _currency = _currency.Trim().ToUpperInvariant();
+
+        if (_validTo is not null && _validTo.Value.Date < _validFrom.Value.Date)
+        {
+            _formError = "Az 'Érvényes -ig' nem lehet korábbi, mint az 'Érvényes -tól'.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private void OnNetChanged(ChangeEventArgs e)
+    {
+        var s = (e.Value?.ToString() ?? "").Replace(',', '.');
+
+        if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+        {
+            _netPrice = v;
+            _lastEdited = LastEdited.Net;
+            RecalcFromNet();
+            StateHasChanged();
+        }
+    }
+
+    private void OnGrossChanged(ChangeEventArgs e)
+    {
+        var s = (e.Value?.ToString() ?? "").Replace(',', '.');
+
+        if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+        {
+            _grossPrice = v;
+            _lastEdited = LastEdited.Gross;
+            RecalcFromGross();
+            StateHasChanged();
+        }
+    }
+
+    private void OnVatChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+            _vatId = id;
+
+        if (_lastEdited == LastEdited.Gross)
+            RecalcFromGross();
+        else
+            RecalcFromNet();
+
+        StateHasChanged();
+    }
+
+    private void OnCurrencyChanged(ChangeEventArgs e)
+    {
+        _currency = e.Value?.ToString() ?? "";
+    }
+
+    private void OnValidFromChanged(ChangeEventArgs e)
+    {
+        var s = e.Value?.ToString();
+        _validFrom = DateTime.TryParse(s, out var dt) ? dt.Date : null;
+    }
+
+    private void OnValidToChanged(ChangeEventArgs e)
+    {
+        var s = e.Value?.ToString();
+        _validTo = string.IsNullOrWhiteSpace(s) ? null : (DateTime.TryParse(s, out var dt) ? dt.Date : null);
+    }
+
+    private decimal GetVatPercent()
+    {
+        var v = _vats.FirstOrDefault(x => x.Id == _vatId);
+        if (v is null) return 0m;
+
+        var s = (v.Code ?? "")
+            .Replace("%", "")
+            .Trim()
+            .Replace(',', '.');
+
+        if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var pct))
+            return pct;
+
+        return 0m;
+    }
+
+    private void RecalcFromNet()
+    {
+        var pct = GetVatPercent();
+        var factor = 1m + (pct / 100m);
+        if (_netPrice <= 0 || factor <= 0) return;
+
+        _grossPrice = Math.Round(_netPrice * factor, 2);
+    }
+
+    private void RecalcFromGross()
+    {
+        var pct = GetVatPercent();
+        var factor = 1m + (pct / 100m);
+        if (_grossPrice <= 0 || factor <= 0) return;
+
+        _netPrice = Math.Round(_grossPrice / factor, 2);
+    }
+
+    private string GetInputClass(bool invalid)
+    {
+        if (!_showErrors) return "";
+        return invalid ? "invalid-input" : "";
+    }
+
+    private string GetRowClass(bool isActive, bool isSelected)
+    {
+        var cls = "";
+        if (isActive) cls += " pp-active";
+        if (isSelected) cls += " pp-selected";
+        return cls.Trim();
+    }
+}

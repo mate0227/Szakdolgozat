@@ -16,7 +16,7 @@ else
 {
     <div class="p-toolbar">
         <input class="p-search"
-               placeholder="Keresés (kód, név, ország, megye, város, cím, email, telefon, ID)..."
+               placeholder="Keresés (kód, név, üzletkötő, irányítószám, ország, megye, város, cím, email, telefon, adószám, ID)..."
                value="@_search"
                @oninput="OnSearchInput" />
 
@@ -49,6 +49,8 @@ else
                             <th style="width:220px;">Név</th>
                             <th style="width:120px;">Vevő</th>
                             <th style="width:120px;">Szállító</th>
+                            <th style="width:130px;">Üzletkötő</th>
+                            <th style="width:120px;">Irányítószám</th>
                             <th style="width:120px;">Ország</th>
                             <th style="width:140px;">Megye</th>
                             <th style="width:160px;">Város</th>
@@ -67,6 +69,8 @@ else
                                 <td title="@p.Name">@p.Name</td>
                                 <td>@(p.IsCustomer ? "Igen" : "Nem")</td>
                                 <td>@(p.IsSupplier ? "Igen" : "Nem")</td>
+                                <td>@(p.IsSalesRep ? "Igen" : "Nem")</td>
+                                <td title="@p.PostalCode">@p.PostalCode</td>
                                 <td title="@p.Country">@p.Country</td>
                                 <td title="@p.County">@p.County</td>
                                 <td title="@p.City">@p.City</td>
@@ -85,7 +89,7 @@ else
                 <table class="p-actions-table">
                     <thead>
                         <tr>
-                            <th style="width:220px;">Kezelés</th>
+                            <th style="width:220px; text-align:center;">Kezelés</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -102,33 +106,29 @@ else
                 </table>
             </div>
         </div>
-
     }
 }
 
 @if (_showAdd)
 {
-    <Szakdolgozat.Components.Modals.AddPartnerModal
-        OnClose="CloseAdd"
-        OnSave="HandleAdd"
-        CodeExistsAsync="PartnerService.CodeExistsAsync" />
+    <Szakdolgozat.Components.Modals.AddPartnerModal OnClose="CloseAdd"
+                                                    OnSave="HandleAdd"
+                                                    CodeExistsAsync="PartnerService.CodeExistsAsync" />
 }
 
 @if (_showEdit && _selected is not null)
 {
-    <Szakdolgozat.Components.Modals.EditPartnerModal
-        Partner="_selected"
-        OnClose="CloseEdit"
-        OnSave="HandleEdit"
-        CodeExistsAsync="(code) => PartnerService.CodeExistsForOtherAsync(_selected.Id, code)" />
+    <Szakdolgozat.Components.Modals.EditPartnerModal Partner="_selected"
+                                                     OnClose="CloseEdit"
+                                                     OnSave="HandleEdit"
+                                                     CodeExistsAsync="(code) => PartnerService.CodeExistsForOtherAsync(_selected.Id, code)" />
 }
 
 @if (_showDelete && _selected is not null)
 {
-    <Szakdolgozat.Components.Modals.DeletePartnerModal
-        Partner="_selected"
-        OnClose="CloseDelete"
-        OnDelete="HandleDelete" />
+    <Szakdolgozat.Components.Modals.DeletePartnerModal Partner="_selected"
+                                                       OnClose="CloseDelete"
+                                                       OnDelete="HandleDelete" />
 }
 
 @code {
@@ -213,6 +213,8 @@ else
             Name = p.Name,
             IsCustomer = p.IsCustomer,
             IsSupplier = p.IsSupplier,
+            IsSalesRep = p.IsSalesRep,
+            PostalCode = p.PostalCode,
             Country = p.Country,
             County = p.County,
             City = p.City,

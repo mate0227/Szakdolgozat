@@ -1,0 +1,294 @@
+﻿@using Szakdolgozat.Models
+@using System.Globalization
+@inject Services.PartnerService PartnerService
+
+<div class="modal-overlay">
+    <div class="modal-window">
+        <h3>Új bevételezés</h3>
+
+        <div class="form-row">
+            <label>Dátum</label>
+            <input class="@GetInputClass(_datum is null)"
+                   type="date"
+                   value="@(_datum is null ? "" : _datum.Value.ToString("yyyy-MM-dd"))"
+                   @onchange="OnDatumChanged" />
+
+            @if (_showErrors && _datum is null)
+            {
+                <p class="field-error">A dátum kitöltése kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row checkbox-row">
+            <label>
+                <input type="checkbox" @bind="_lezart" />
+                Lezárt
+            </label>
+        </div>
+
+        <hr class="sep" />
+
+        <div class="form-row">
+            <label>Partner név</label>
+
+            <select class="@GetInputClass(_selectedPartnerId is null)"
+                    value="@(_selectedPartnerId is null ? "" : _selectedPartnerId.Value.ToString())"
+                    @onchange="OnPartnerSelected">
+                <option value="">-- Válassz partnert --</option>
+                @foreach (var p in _partners)
+                {
+                    <option value="@p.Id">@p.Name (@p.Code)</option>
+                }
+            </select>
+
+            @if (_showErrors && _selectedPartnerId is null)
+            {
+                <p class="field-error">Partner kiválasztása kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Partner kód</label>
+            <input value="@_partnerKod"
+                   class="@GetInputClass(string.IsNullOrWhiteSpace(_partnerKod))"
+                   disabled />
+        </div>
+
+        <div class="form-row">
+            <label>Irányítószám</label>
+            <input value="@_partnerIrsz"
+                   class="@GetInputClass(string.IsNullOrWhiteSpace(_partnerIrsz))"
+                   disabled />
+        </div>
+
+        <div class="form-row">
+            <label>Város</label>
+            <input value="@_partnerVaros"
+                   class="@GetInputClass(string.IsNullOrWhiteSpace(_partnerVaros))"
+                   disabled />
+        </div>
+
+        <div class="form-row">
+            <label>Cím</label>
+            <input value="@_partnerCim"
+                   class="@GetInputClass(string.IsNullOrWhiteSpace(_partnerCim))"
+                   disabled />
+        </div>
+
+        <hr class="sep" />
+
+        <div class="form-row">
+            <label>Valuta</label>
+            <select class="@GetInputClass(string.IsNullOrWhiteSpace(_valuta))"
+                    value="@_valuta"
+                    @onchange="OnValutaChanged">
+                <option value="HUF">HUF</option>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+            </select>
+
+            @if (_showErrors && string.IsNullOrWhiteSpace(_valuta))
+            {
+                <p class="field-error">A valuta kiválasztása kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Árfolyam</label>
+            <input class="@GetInputClass(!IsPositiveDecimal(_arfolyamStr))"
+                   type="number"
+                   step="0.0001"
+                   value="@_arfolyamStr"
+                   @oninput="OnArfolyamChanged" />
+
+            @if (_showErrors && !IsPositiveDecimal(_arfolyamStr))
+            {
+                <p class="field-error">Az árfolyam legyen pozitív szám!</p>
+            }
+        </div>
+
+        <div class="form-row">
+            <label>Megjegyzés (opcionális)</label>
+            <input value="@_megjegyzes" @oninput="OnMegjegyzesChanged" />
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(_formError))
+        {
+            <p class="field-error">@_formError</p>
+        }
+
+        <div class="button-row">
+            <button class="save-btn" type="button" @onclick="Save" disabled="@_saving">Mentés</button>
+            <button class="close-btn" type="button" @onclick="Close" disabled="@_saving">Mégse</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<BevetelFej> OnSave { get; set; }
+
+    // recommended: parent passes BevetelService.GetNextBizonylatAsync
+    [Parameter] public Func<Task<string>>? GenerateBizonylatAsync { get; set; }
+
+    // optional extra safety (UX)
+    [Parameter] public Func<string, Task<bool>>? BizonylatExistsAsync { get; set; }
+
+    private bool _showErrors;
+    private bool _saving;
+    private string? _formError;
+
+    private DateTime? _datum = DateTime.Today;
+    private bool _lezart;
+
+    private List<Partner> _partners = new();
+    private int? _selectedPartnerId;
+
+    private string _partnerKod = "";
+    private string _partnerNev = "";
+    private string _partnerIrsz = "";
+    private string _partnerVaros = "";
+    private string _partnerCim = "";
+
+    private string _valuta = "HUF";
+    private string _arfolyamStr = "1";
+    private string _megjegyzes = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _partners = await PartnerService.GetAllAsync(search: null, take: 5000);
+        if (_datum is null) _datum = DateTime.Today;
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private void OnDatumChanged(ChangeEventArgs e)
+    {
+        var s = e.Value?.ToString();
+        _datum = DateTime.TryParse(s, out var dt) ? dt.Date : null;
+    }
+
+    private void OnPartnerSelected(ChangeEventArgs e)
+    {
+        var s = e.Value?.ToString();
+        if (!int.TryParse(s, out var id))
+        {
+            _selectedPartnerId = null;
+            ClearPartnerSnapshot();
+            return;
+        }
+
+        _selectedPartnerId = id;
+
+        var p = _partners.FirstOrDefault(x => x.Id == id);
+        if (p is null)
+        {
+            ClearPartnerSnapshot();
+            return;
+        }
+
+        _partnerKod = p.Code ?? "";
+        _partnerNev = p.Name ?? "";
+        _partnerIrsz = p.PostalCode ?? "";
+        _partnerVaros = p.City ?? "";
+        _partnerCim = p.Address ?? "";
+    }
+
+    private void ClearPartnerSnapshot()
+    {
+        _partnerKod = "";
+        _partnerNev = "";
+        _partnerIrsz = "";
+        _partnerVaros = "";
+        _partnerCim = "";
+    }
+
+    private void OnValutaChanged(ChangeEventArgs e) => _valuta = e.Value?.ToString() ?? "";
+    private void OnArfolyamChanged(ChangeEventArgs e) => _arfolyamStr = e.Value?.ToString() ?? "";
+    private void OnMegjegyzesChanged(ChangeEventArgs e) => _megjegyzes = e.Value?.ToString() ?? "";
+
+    private static bool TryParseDecimal(string s, out decimal value)
+    {
+        s = (s ?? "").Trim().Replace(',', '.');
+        return decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool IsPositiveDecimal(string s) => TryParseDecimal(s, out var v) && v > 0;
+
+    private async Task Save()
+    {
+        if (_saving) return;
+        _saving = true;
+
+        try
+        {
+            _showErrors = true;
+            _formError = null;
+
+            if (_datum is null) return;
+            if (_selectedPartnerId is null) return;
+
+            _valuta = (_valuta ?? "").Trim().ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(_valuta)) return;
+
+            if (!TryParseDecimal(_arfolyamStr, out var arfolyam) || arfolyam <= 0) return;
+
+            if (GenerateBizonylatAsync is null)
+            {
+                _formError = "Bizonylat generátor nincs beállítva (GenerateBizonylatAsync).";
+                return;
+            }
+
+            // Generate ONLY here, on Save
+            var biz = (await GenerateBizonylatAsync()).Trim();
+            if (string.IsNullOrWhiteSpace(biz))
+            {
+                _formError = "Bizonylat generálás sikertelen.";
+                return;
+            }
+
+            // optional UX check (server-side uniqueness still recommended)
+            if (BizonylatExistsAsync != null)
+            {
+                var exists = await BizonylatExistsAsync(biz);
+                if (exists)
+                {
+                    _formError = "Generált bizonylat már létezik, próbáld újra.";
+                    return;
+                }
+            }
+
+            await OnSave.InvokeAsync(new BevetelFej
+            {
+                Bizonylat = biz,
+                Datum = _datum.Value.Date,
+                Lezart = _lezart,
+
+                PartnerKod = (_partnerKod ?? "").Trim(),
+                PartnerNev = (_partnerNev ?? "").Trim(),
+                PartnerIrsz = (_partnerIrsz ?? "").Trim(),
+                PartnerVaros = (_partnerVaros ?? "").Trim(),
+                PartnerCim = (_partnerCim ?? "").Trim(),
+
+                Megjegyzes = string.IsNullOrWhiteSpace(_megjegyzes) ? null : _megjegyzes.Trim(),
+
+                Valuta = _valuta,
+                Arfolyam = arfolyam,
+
+                // totals are calculated from lines later
+                NettoErtek = 0m,
+                BruttoErtek = 0m
+            });
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private string GetInputClass(bool invalid)
+    {
+        if (!_showErrors) return "";
+        return invalid ? "invalid-input" : "";
+    }
+}

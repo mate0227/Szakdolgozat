@@ -16,7 +16,7 @@ else
 {
     <div class="p-toolbar">
         <input class="p-search"
-               placeholder="Keresés (kód, név, megye, város, cím, ID)..."
+               placeholder="Keresés (kód, név, megye, város, irányítószám, cím, ID)..."
                value="@_search"
                @oninput="OnSearchInput" />
 
@@ -48,6 +48,7 @@ else
                         <th style="width:120px;">Automata</th>
                         <th style="width:140px;">Megye</th>
                         <th style="width:160px;">Város</th>
+                        <th style="width:140px;">Irányítószám</th>
                         <th>Cím</th>
                         <th style="width:220px;">Kezelés</th>
                     </tr>
@@ -62,6 +63,7 @@ else
                             <td>@(w.IsAutomaton ? "Igen" : "Nem")</td>
                             <td title="@w.County">@w.County</td>
                             <td title="@w.City">@w.City</td>
+                            <td title="@w.PostalCode">@w.PostalCode</td>
                             <td title="@w.Address">@w.Address</td>
                             <td>
                                 <button class="table-btn edit" type="button" @onclick="() => OpenEdit(w)">Módosítás</button>
@@ -180,6 +182,7 @@ else
             IsAutomaton = w.IsAutomaton,
             County = w.County,
             City = w.City,
+            PostalCode = w.PostalCode,
             Address = w.Address
         };
 
@@ -199,6 +202,7 @@ else
             IsAutomaton = w.IsAutomaton,
             County = w.County,
             City = w.City,
+            PostalCode = w.PostalCode,
             Address = w.Address
         };
 

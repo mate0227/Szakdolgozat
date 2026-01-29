@@ -39,35 +39,55 @@ else
     }
     else
     {
-        <div class="p-table-wrap">
-            <table class="p-table">
-                <thead>
-                    <tr>
-                        <th style="width:90px;">ID</th>
-                        <th style="width:140px;">Kód</th>
-                        <th>Név</th>
-                        <th style="width:220px;">Csoport</th>
-                        <th style="width:120px;">Egység</th>
-                        <th style="width:220px;">Kezelés</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var p in _products)
-                    {
+        <div class="p-table-split">
+            <!-- LEFT: scrollable data -->
+            <div class="p-table-scroll">
+                <table class="p-table">
+                    <thead>
                         <tr>
-                            <td>@p.Id</td>
-                            <td title="@p.Code">@p.Code</td>
-                            <td title="@p.Name">@p.Name</td>
-                            <td title="@($"{p.GroupName} ({p.GroupId})")">@p.GroupName (@p.GroupId)</td>
-                            <td title="@p.Unit">@p.Unit</td>
-                            <td>
-                                <button class="table-btn edit" type="button" @onclick="() => OpenEdit(p)">Módosítás</button>
-                                <button class="table-btn delete" type="button" @onclick="() => OpenDelete(p)">Törlés</button>
-                            </td>
+                            <th style="width:90px;">ID</th>
+                            <th style="width:140px;">Kód</th>
+                            <th>Név</th>
+                            <th style="width:220px;">Csoport</th>
+                            <th style="width:120px;">Egység</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in _products)
+                        {
+                            <tr>
+                                <td>@p.Id</td>
+                                <td title="@p.Code">@p.Code</td>
+                                <td title="@p.Name">@p.Name</td>
+                                <td title="@($"{p.GroupName} ({p.GroupId})")">@p.GroupName (@p.GroupId)</td>
+                                <td title="@p.Unit">@p.Unit</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-table-actions">
+                <table class="p-actions-table">
+                    <thead>
+                        <tr>
+                            <th style="width:300px;">Kezelés</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in _products)
+                        {
+                            <tr>
+                                <td>
+                                    <button class="table-btn prices" type="button" @onclick="() => OpenPrices(p)">Árak</button>
+                                    <button class="table-btn edit" type="button" @onclick="() => OpenEdit(p)">Módosítás</button>
+                                    <button class="table-btn delete" type="button" @onclick="() => OpenDelete(p)">Törlés</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     }
 }
@@ -75,11 +95,10 @@ else
 @if (_showAdd)
 {
     <Szakdolgozat.Components.Modals.AddProductModal Groups="_groups"
-                                                    OnClose="CloseAdd"
-                                                    OnSave="HandleAdd"
-                                                    CodeExistsAsync="ProductService.CodeExistsAsync" />
+                                                   OnClose="CloseAdd"
+                                                   OnSave="HandleAdd"
+                                                   CodeExistsAsync="ProductService.CodeExistsAsync" />
 }
-
 
 @if (_showEdit && _selected is not null)
 {
@@ -97,6 +116,12 @@ else
                                                       OnDelete="HandleDelete" />
 }
 
+@if (_showPrices && _selectedPrices is not null)
+{
+    <Szakdolgozat.Components.Modals.ProductPricesModal Product="_selectedPrices"
+                                                    OnClose="ClosePrices" />
+}
+
 @code {
     private bool _loading = true;
     private string _error = "";
@@ -110,6 +135,9 @@ else
     private bool _showAdd;
     private bool _showEdit;
     private bool _showDelete;
+
+    private bool _showPrices;
+    private ProductItem? _selectedPrices;
 
     private ProductItem? _selected;
 
@@ -127,7 +155,6 @@ else
 
     private async Task LoadGroupsAsync()
     {
-        // so dropdowns have data
         _groups = await ProductGroupService.GetAllAsync(search: null);
     }
 
@@ -169,21 +196,34 @@ else
         catch (TaskCanceledException) { }
     }
 
-    private void OpenAdd() { _showAdd = true; _showEdit = _showDelete = false; _selected = null; }
+    private void OpenAdd() { _showAdd = true; _showEdit = _showDelete = _showPrices = false; _selected = null; _selectedPrices = null; }
     private void CloseAdd() => _showAdd = false;
 
-    private void OpenEdit(ProductItem p) { _selected = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit }; _showEdit = true; _showAdd = _showDelete = false; }
+    private void OpenEdit(ProductItem p)
+    {
+        _selected = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit };
+        _showEdit = true; _showAdd = _showDelete = _showPrices = false;
+    }
     private void CloseEdit() => _showEdit = false;
 
-    private void OpenDelete(ProductItem p) { _selected = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit }; _showDelete = true; _showAdd = _showEdit = false; }
+    private void OpenDelete(ProductItem p)
+    {
+        _selected = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit };
+        _showDelete = true; _showAdd = _showEdit = _showPrices = false;
+    }
     private void CloseDelete() => _showDelete = false;
+
+    private void OpenPrices(ProductItem p)
+    {
+        _selectedPrices = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit };
+        _showPrices = true; _showAdd = _showEdit = _showDelete = false;
+    }
+    private void ClosePrices() => _showPrices = false;
 
     private async Task HandleAdd(ProductItem p)
     {
-        // create
         var id = await ProductService.CreateAsync(p.Code, p.Name, p.GroupId, p.Unit);
 
-        // log
         await LogService.AddLogAsync(
             Session.CurrentUser!.UserCode,
             "CREATE_PRODUCT",

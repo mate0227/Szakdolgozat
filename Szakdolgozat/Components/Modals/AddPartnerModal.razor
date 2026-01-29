@@ -36,6 +36,19 @@
                 <input type="checkbox" @bind="IsSupplier" />
                 Szállító
             </label>
+            <label>
+                <input type="checkbox" @bind="IsSalesRep" />
+                Üzletkötő
+            </label>
+        </div>
+
+        <div class="form-row">
+            <label>Irányítószám</label>
+            <input @bind="PostalCode" class="@GetInputClass(PostalCode)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(PostalCode))
+            {
+                <p class="field-error">Az irányítószám kitöltése kötelező!</p>
+            }
         </div>
 
         <div class="form-row">
@@ -109,7 +122,9 @@
     public string Name { get; set; } = "";
     public bool IsCustomer { get; set; }
     public bool IsSupplier { get; set; }
+    public bool IsSalesRep { get; set; }
 
+    public string PostalCode { get; set; } = "";
     public string Country { get; set; } = "";
     public string County { get; set; } = "";
     public string City { get; set; } = "";
@@ -130,6 +145,7 @@
 
         if (string.IsNullOrWhiteSpace(Code) ||
             string.IsNullOrWhiteSpace(Name) ||
+            string.IsNullOrWhiteSpace(PostalCode) ||
             string.IsNullOrWhiteSpace(Country) ||
             string.IsNullOrWhiteSpace(County) ||
             string.IsNullOrWhiteSpace(City) ||
@@ -152,10 +168,14 @@
             Name = Name.Trim(),
             IsCustomer = IsCustomer,
             IsSupplier = IsSupplier,
+            IsSalesRep = IsSalesRep,
+
+            PostalCode = PostalCode.Trim(),
             Country = Country.Trim(),
             County = County.Trim(),
             City = City.Trim(),
             Address = Address.Trim(),
+
             Email = string.IsNullOrWhiteSpace(Email) ? null : Email.Trim(),
             Phone = string.IsNullOrWhiteSpace(Phone) ? null : Phone.Trim(),
             TaxNumber = string.IsNullOrWhiteSpace(TaxNumber) ? null : TaxNumber.Trim()

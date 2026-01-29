@@ -34,11 +34,9 @@
             </label>
         </div>
 
-
-
         <div class="form-row">
             <label>Megye</label>
-            <input @bind="County" class="@GetInputClass(County)" />
+            <input @bind="County" class="@GetLocationInputClass(County)" />
             @if (ShowErrors && IsAutomaton && string.IsNullOrWhiteSpace(County))
             {
                 <p class="field-error">Automatánál a megye kötelező!</p>
@@ -47,7 +45,7 @@
 
         <div class="form-row">
             <label>Város</label>
-            <input @bind="City" class="@GetInputClass(City)" />
+            <input @bind="City" class="@GetLocationInputClass(City)" />
             @if (ShowErrors && IsAutomaton && string.IsNullOrWhiteSpace(City))
             {
                 <p class="field-error">Automatánál a város kötelező!</p>
@@ -55,8 +53,17 @@
         </div>
 
         <div class="form-row">
+            <label>Irányítószám</label>
+            <input @bind="PostalCode" class="@GetLocationInputClass(PostalCode)" />
+            @if (ShowErrors && IsAutomaton && string.IsNullOrWhiteSpace(PostalCode))
+            {
+                <p class="field-error">Automatánál az irányítószám kötelező!</p>
+            }
+        </div>
+
+        <div class="form-row">
             <label>Cím</label>
-            <input @bind="Address" class="@GetInputClass(Address)" />
+            <input @bind="Address" class="@GetLocationInputClass(Address)" />
             @if (ShowErrors && IsAutomaton && string.IsNullOrWhiteSpace(Address))
             {
                 <p class="field-error">Automatánál a cím kötelező!</p>
@@ -74,7 +81,6 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<Warehouse> OnSave { get; set; }
 
-    // parent passes WarehouseService.CodeExistsAsync
     [Parameter] public Func<string, Task<bool>>? CodeExistsAsync { get; set; }
 
     public bool ShowErrors { get; set; }
@@ -82,8 +88,10 @@
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public bool IsAutomaton { get; set; }
+
     public string County { get; set; } = "";
     public string City { get; set; } = "";
+    public string PostalCode { get; set; } = "";
     public string Address { get; set; } = "";
 
     public string? CodeError { get; set; }
@@ -102,10 +110,10 @@
             (needsLocation && (
                 string.IsNullOrWhiteSpace(County) ||
                 string.IsNullOrWhiteSpace(City) ||
+                string.IsNullOrWhiteSpace(PostalCode) ||
                 string.IsNullOrWhiteSpace(Address)
             )))
             return;
-
 
         if (CodeExistsAsync != null)
         {
@@ -124,6 +132,7 @@
             IsAutomaton = IsAutomaton,
             County = County.Trim(),
             City = City.Trim(),
+            PostalCode = PostalCode.Trim(),
             Address = Address.Trim()
         });
     }
@@ -136,11 +145,10 @@
         return "";
     }
 
-    private string GetInputClass(object v)
+    private string GetInputClass(string v)
     {
         if (!ShowErrors) return "";
-        if (v is string s && string.IsNullOrWhiteSpace(s)) return "invalid-input";
-        return "";
+        return string.IsNullOrWhiteSpace(v) ? "invalid-input" : "";
     }
 
     private string GetLocationInputClass(string v)
@@ -149,5 +157,4 @@
         if (!IsAutomaton) return "";
         return string.IsNullOrWhiteSpace(v) ? "invalid-input" : "";
     }
-
 }

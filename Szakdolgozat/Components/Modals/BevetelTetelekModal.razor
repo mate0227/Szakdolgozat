@@ -1,0 +1,728 @@
+﻿@using Szakdolgozat.Models
+@using System.Globalization
+@inject Services.BevetelService BevetelService
+@inject Services.ProductService ProductService
+@inject Services.VatService VatService
+
+<div class="modal-overlay">
+    <div class="modal-window bt-window">
+        <div class="bt-header">
+            <h3>Tételek</h3>
+            <div class="bt-sub">
+                Bizonylat: <b>@Fej.Bizonylat</b> | Partner: <b>@Fej.PartnerNev</b>
+            </div>
+        </div>
+
+        @if (_loading)
+        {
+            <p>Loading...</p>
+        }
+        else if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <p class="bt-error">@_error</p>
+        }
+        else
+        {
+            <div class="bt-form">
+                <div class="bt-form-grid">
+
+                    <!-- PRODUCT DROPDOWN -->
+                    <div class="form-row">
+                        <label>Termék (név)</label>
+
+                        <select disabled="@(!_inputsEnabled)"
+                                class="@GetInputClass(_selectedProductId is null, required: true)"
+                                value="@(_selectedProductId is null ? "" : _selectedProductId.Value.ToString())"
+                                @onchange="OnProductSelected">
+                            <option value="">-- Válassz terméket --</option>
+                            @foreach (var p in _products)
+                            {
+                                <option value="@p.Id">@p.Name (@p.Code)</option>
+                            }
+                        </select>
+
+                        @if (_showErrors && _selectedProductId is null)
+                        {
+                            <p class="field-error">Termék kiválasztása kötelező.</p>
+                        }
+                    </div>
+
+                    <!-- AUTO-FILLED, DISABLED -->
+                    <div class="form-row">
+                        <label>Termék ID</label>
+                        <input value="@_termekIdStr" disabled />
+                    </div>
+
+                    <div class="form-row">
+                        <label>Név</label>
+                        <input value="@_nev" disabled />
+                    </div>
+
+                    <div class="form-row">
+                        <label>ME</label>
+                        <input value="@_me" disabled />
+                    </div>
+
+                    <!-- VAT DROPDOWN -->
+                    <div class="form-row">
+                        <label>ÁFA kód</label>
+
+                        <select disabled="@(!_inputsEnabled)"
+                                class="@GetInputClass(_vatId == 0, required: true)"
+                                value="@_vatId"
+                                @onchange="OnVatChanged">
+                            <option value="0">-- Válassz ÁFÁt --</option>
+                            @foreach (var v in _vats)
+                            {
+                                <option value="@v.Id">@v.Name (@v.Code)</option>
+                            }
+                        </select>
+
+                        @if (_showErrors && _vatId == 0)
+                        {
+                            <p class="field-error">ÁFA kiválasztása kötelező.</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <label>Mennyiség</label>
+                        <input type="number"
+                               step="0.0001"
+                               value="@_mennyStr"
+                               disabled="@(!_inputsEnabled)"
+                               class="@GetInputClass(_mennyStr, required: true, isDecimal: true)"
+                               @oninput="OnMennyChanged" />
+                        @if (_showErrors && !IsDecimal(_mennyStr))
+                        {
+                            <p class="field-error">Mennyiség érvénytelen.</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <label>Nettó egységár</label>
+                        <input type="number"
+                               step="0.01"
+                               value="@_nettoEAStr"
+                               disabled="@(!_inputsEnabled)"
+                               class="@GetInputClass(_nettoEAStr, required: true, isDecimal: true)"
+                               @oninput="OnNettoEAChanged" />
+                        @if (_showErrors && !IsDecimal(_nettoEAStr))
+                        {
+                            <p class="field-error">Nettó egységár érvénytelen.</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <label>Bruttó egységár</label>
+                        <input type="number"
+                               step="0.01"
+                               value="@_bruttoEAStr"
+                               disabled="@(!_inputsEnabled)"
+                               class="@GetInputClass(_bruttoEAStr, required: true, isDecimal: true)"
+                               @oninput="OnBruttoEAChanged" />
+                        @if (_showErrors && !IsDecimal(_bruttoEAStr))
+                        {
+                            <p class="field-error">Bruttó egységár érvénytelen.</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <label>Nettó tételérték</label>
+                        <input value="@_nettoTE" disabled />
+                    </div>
+
+                    <div class="form-row">
+                        <label>Bruttó tételérték</label>
+                        <input value="@_bruttoTE" disabled />
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_formError))
+                {
+                    <p class="bt-error">@_formError</p>
+                }
+
+                <div class="bt-buttons">
+                    <button class="bt-btn" type="button" @onclick="ClickUjTetel" disabled="@_loading">Új tétel</button>
+
+                    <button class="bt-btn"
+                            type="button"
+                            @onclick="ClickMentes"
+                            disabled="@(!_inputsEnabled)">
+                        Mentés
+                    </button>
+
+                    <button class="bt-btn secondary"
+                            type="button"
+                            @onclick="ClickModositas"
+                            disabled="@(_selected is null || _inputsEnabled)">
+                        Módosítás
+                    </button>
+
+                    <button class="bt-btn danger"
+                            type="button"
+                            @onclick="ClickTorles"
+                            disabled="@(_selected is null || _inputsEnabled)">
+                        Törlés
+                    </button>
+
+                    <button class="bt-btn secondary"
+                            type="button"
+                            @onclick="ClickMegsem"
+                            disabled="@(!_inputsEnabled)">
+                        Mégsem
+                    </button>
+                </div>
+            </div>
+
+            <div class="bt-table-wrap">
+                <table class="bt-table">
+                    <thead>
+                        <tr>
+                            <th style="width:80px;">ID</th>
+                            <th style="width:140px;">Termék ID</th>
+                            <th style="width:260px;">Név</th>
+                            <th style="width:90px;">ME</th>
+                            <th style="width:120px;">ÁFA</th>
+                            <th style="width:140px;">Menny.</th>
+                            <th style="width:160px;">Nettó egységár</th>
+                            <th style="width:160px;">Bruttó egységár</th>
+                            <th style="width:160px;">Nettó érték</th>
+                            <th style="width:160px;">Bruttó érték</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (_items.Count == 0)
+                        {
+                            <tr><td colspan="10">Nincs tétel.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var t in _items)
+                            {
+                                var sel = _selected?.Id == t.Id;
+                                <tr class="@(sel ? "row-selected" : "")"
+                                    style="cursor:pointer;"
+                                    title="Click to select"
+                                    @onclick="() => ClickRow(t)">
+                                    <td>@t.Id</td>
+                                    <td>@t.TermekId</td>
+                                    <td title="@t.Nev">@t.Nev</td>
+                                    <td>@t.Me</td>
+                                    <td>@t.AfaKod</td>
+                                    <td>@t.Mennyiseg.ToString("0.####")</td>
+                                    <td>@t.NettoEgysegAr.ToString("0.00")</td>
+                                    <td>@t.BruttoEgysegAr.ToString("0.00")</td>
+                                    <td>@t.NettoTetelErtek.ToString("0.00")</td>
+                                    <td>@t.BruttoTetelErtek.ToString("0.00")</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="button-row">
+            <button class="close-btn" type="button" @onclick="Close">Bezárás</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public BevetelFej Fej { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool _loading = true;
+    private string _error = "";
+
+    private List<BevetelTetel> _items = new();
+    private BevetelTetel? _selected;
+
+    private List<ProductItem> _products = new();
+    private int? _selectedProductId;
+
+    private List<VatItem> _vats = new();
+    private int _vatId;    
+    private string _afaKod = "";
+
+    private bool _inputsEnabled;
+    private bool _showErrors;
+    private string? _formError;
+
+    private enum Mode { View, New, Edit }
+    private Mode _mode = Mode.View;
+
+    private string _termekIdStr = "";
+    private string _nev = "";
+    private string _me = "";
+
+    private string _mennyStr = "0";
+    private string _nettoEAStr = "0";
+    private string _bruttoEAStr = "0";
+
+    private string _nettoTE = "0.00";
+    private string _bruttoTE = "0.00";
+
+    private enum LastEdited { None, NetUnit, GrossUnit }
+    private LastEdited _lastEdited = LastEdited.None;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLookupsAsync();
+        await LoadAsync();
+
+        SetModeView();
+        ClearForm();
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        try
+        {
+            _products = await ProductService.GetAllAsync(search: null, take: 5000);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _products = new();
+        }
+
+        try
+        {
+            _vats = await VatService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = string.IsNullOrWhiteSpace(_error) ? ex.Message : _error;
+            _vats = new();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+        StateHasChanged();
+
+        try
+        {
+            _items = await BevetelService.GetTetelekAsync(Fej.Bizonylat);
+
+            if (_selected is not null && !_items.Any(x => x.Id == _selected.Id))
+                _selected = null;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+
+    private void OnProductSelected(ChangeEventArgs e)
+    {
+        var s = e.Value?.ToString();
+        if (!int.TryParse(s, out var id))
+        {
+            _selectedProductId = null;
+            ClearProductSnapshot();
+            return;
+        }
+
+        _selectedProductId = id;
+
+        var p = _products.FirstOrDefault(x => x.Id == id);
+        if (p is null)
+        {
+            ClearProductSnapshot();
+            return;
+        }
+
+        _termekIdStr = p.Id.ToString();
+        _nev = p.Name ?? "";
+        _me = p.Unit ?? "";
+    }
+
+    private void ClearProductSnapshot()
+    {
+        _termekIdStr = "";
+        _nev = "";
+        _me = "";
+    }
+
+    private void OnVatChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+            _vatId = id;
+        else
+            _vatId = 0;
+
+        var v = _vats.FirstOrDefault(x => x.Id == _vatId);
+        _afaKod = v?.Code ?? "";
+
+        RecalcByLastEdited();
+        StateHasChanged();
+    }
+
+    private void OnMennyChanged(ChangeEventArgs e)
+    {
+        _mennyStr = e.Value?.ToString() ?? "";
+        RecalcByLastEdited();
+        StateHasChanged();
+    }
+
+    private void OnNettoEAChanged(ChangeEventArgs e)
+    {
+        _nettoEAStr = e.Value?.ToString() ?? "";
+        _lastEdited = LastEdited.NetUnit;
+
+        RecalcFromNet();
+        StateHasChanged();
+    }
+
+    private void OnBruttoEAChanged(ChangeEventArgs e)
+    {
+        _bruttoEAStr = e.Value?.ToString() ?? "";
+        _lastEdited = LastEdited.GrossUnit;
+
+        RecalcFromGross();
+        StateHasChanged();
+    }
+
+    private void RecalcByLastEdited()
+    {
+        if (_lastEdited == LastEdited.GrossUnit)
+            RecalcFromGross();
+        else
+            RecalcFromNet();
+    }
+
+    private decimal GetVatPercent()
+    {
+        var v = _vats.FirstOrDefault(x => x.Id == _vatId);
+        if (v is null) return 0m;
+
+        var s = (v.Code ?? "")
+            .Replace("%", "")
+            .Trim()
+            .Replace(',', '.');
+
+        return decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var pct)
+            ? pct
+            : 0m;
+    }
+
+    private void RecalcFromNet()
+    {
+        if (!TryParseDecimal(_nettoEAStr, out var netUnit)) netUnit = 0m;
+        if (!TryParseDecimal(_mennyStr, out var qty)) qty = 0m;
+
+        var pct = GetVatPercent();
+        var factor = 1m + (pct / 100m);
+
+        var grossUnit = Math.Round(netUnit * factor, 2);
+        var netTotal = Math.Round(netUnit * qty, 2);
+        var grossTotal = Math.Round(grossUnit * qty, 2);
+
+        _bruttoEAStr = grossUnit.ToString("0.00", CultureInfo.InvariantCulture);
+        _nettoTE = netTotal.ToString("0.00", CultureInfo.InvariantCulture);
+        _bruttoTE = grossTotal.ToString("0.00", CultureInfo.InvariantCulture);
+    }
+
+    private void RecalcFromGross()
+    {
+        if (!TryParseDecimal(_bruttoEAStr, out var grossUnit)) grossUnit = 0m;
+        if (!TryParseDecimal(_mennyStr, out var qty)) qty = 0m;
+
+        var pct = GetVatPercent();
+        var factor = 1m + (pct / 100m);
+
+        var netUnit = factor <= 0 ? 0m : Math.Round(grossUnit / factor, 2);
+        var netTotal = Math.Round(netUnit * qty, 2);
+        var grossTotal = Math.Round(grossUnit * qty, 2);
+
+        _nettoEAStr = netUnit.ToString("0.00", CultureInfo.InvariantCulture);
+        _nettoTE = netTotal.ToString("0.00", CultureInfo.InvariantCulture);
+        _bruttoTE = grossTotal.ToString("0.00", CultureInfo.InvariantCulture);
+    }
+
+    private void ClickRow(BevetelTetel t)
+    {
+        if (_inputsEnabled) return;
+
+        if (_selected?.Id == t.Id)
+        {
+            _selected = null;
+            ClearForm();
+            return;
+        }
+
+        _selected = Clone(t);
+        FillFormFromSelected();
+    }
+
+    private void ClickUjTetel()
+    {
+        _selected = null;
+        ClearForm();
+        SetModeNew();
+    }
+
+    private void ClickModositas()
+    {
+        if (_selected is null) return;
+        FillFormFromSelected();
+        SetModeEdit();
+    }
+
+    private async Task ClickTorles()
+    {
+        if (_selected is null) return;
+
+        try
+        {
+            await BevetelService.DeleteTetelAsync(_selected.Id);
+            await BevetelService.RecalcFejTotalsAsync(Fej.Bizonylat);
+
+            _selected = null;
+            ClearForm();
+            SetModeView();
+
+            await LoadAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _formError = ex.Message;
+        }
+    }
+
+    private void ClickMegsem()
+    {
+        _showErrors = false;
+        _formError = null;
+
+        SetModeView();
+
+        if (_selected is not null)
+            FillFormFromSelected();
+        else
+            ClearForm();
+    }
+
+    private async Task ClickMentes()
+    {
+        _showErrors = true;
+        _formError = null;
+
+        if (!ValidateForm(out var termekId, out var menny, out var nettoEA, out var bruttoEA))
+            return;
+
+
+        if (!TryParseDecimal(_nettoTE, out var nettoTE)) nettoTE = 0m;
+        if (!TryParseDecimal(_bruttoTE, out var bruttoTE)) bruttoTE = 0m;
+
+        try
+        {
+            if (_mode == Mode.New)
+            {
+                await BevetelService.CreateTetelAsync(new BevetelTetel
+                {
+                    Bizonylat = Fej.Bizonylat,
+                    TermekId = termekId,
+                    Nev = _nev.Trim(),
+                    Me = _me.Trim(),
+                    AfaKod = _afaKod.Trim(),
+                    Mennyiseg = menny,
+                    NettoEgysegAr = nettoEA,
+                    BruttoEgysegAr = bruttoEA,
+                    NettoTetelErtek = nettoTE,
+                    BruttoTetelErtek = bruttoTE
+                });
+            }
+            else if (_mode == Mode.Edit)
+            {
+                if (_selected is null) return;
+
+                await BevetelService.UpdateTetelAsync(new BevetelTetel
+                {
+                    Id = _selected.Id,
+                    Bizonylat = Fej.Bizonylat,
+                    TermekId = termekId,
+                    Nev = _nev.Trim(),
+                    Me = _me.Trim(),
+                    AfaKod = _afaKod.Trim(),
+                    Mennyiseg = menny,
+                    NettoEgysegAr = nettoEA,
+                    BruttoEgysegAr = bruttoEA,
+                    NettoTetelErtek = nettoTE,
+                    BruttoTetelErtek = bruttoTE
+                });
+            }
+            else return;
+
+            await BevetelService.RecalcFejTotalsAsync(Fej.Bizonylat);
+
+            SetModeView();
+            _showErrors = false;
+
+            _selected = null;
+            ClearForm();
+
+            await LoadAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _formError = ex.Message;
+        }
+    }
+
+    private void SetModeView()
+    {
+        _mode = Mode.View;
+        _inputsEnabled = false;
+    }
+
+    private void SetModeNew()
+    {
+        _mode = Mode.New;
+        _inputsEnabled = true;
+        _showErrors = false;
+        _formError = null;
+
+        _selectedProductId = null;
+        ClearProductSnapshot();
+
+        _vatId = 0;
+        _afaKod = "";
+
+        _mennyStr = "0";
+        _nettoEAStr = "0";
+        _bruttoEAStr = "0";
+        _nettoTE = "0.00";
+        _bruttoTE = "0.00";
+
+        _lastEdited = LastEdited.None;
+    }
+
+    private void SetModeEdit()
+    {
+        _mode = Mode.Edit;
+        _inputsEnabled = true;
+        _showErrors = false;
+        _formError = null;
+
+        RecalcByLastEdited();
+    }
+
+    private void FillFormFromSelected()
+    {
+        if (_selected is null) return;
+
+        _selectedProductId = _selected.TermekId;
+        _termekIdStr = _selected.TermekId.ToString();
+        _nev = _selected.Nev ?? "";
+        _me = _selected.Me ?? "";
+
+        _afaKod = _selected.AfaKod ?? "";
+        var matchVat = _vats.FirstOrDefault(x => (x.Code ?? "") == _afaKod);
+        _vatId = matchVat?.Id ?? 0;
+
+        _mennyStr = _selected.Mennyiseg.ToString("0.####", CultureInfo.InvariantCulture);
+        _nettoEAStr = _selected.NettoEgysegAr.ToString("0.00", CultureInfo.InvariantCulture);
+        _bruttoEAStr = _selected.BruttoEgysegAr.ToString("0.00", CultureInfo.InvariantCulture);
+
+        _lastEdited = LastEdited.NetUnit;
+
+        RecalcFromNet();
+    }
+
+    private void ClearForm()
+    {
+        _selectedProductId = null;
+        ClearProductSnapshot();
+
+        _vatId = 0;
+        _afaKod = "";
+
+        _mennyStr = "0";
+        _nettoEAStr = "0";
+        _bruttoEAStr = "0";
+
+        _nettoTE = "0.00";
+        _bruttoTE = "0.00";
+
+        _showErrors = false;
+        _formError = null;
+        _lastEdited = LastEdited.None;
+    }
+
+    private bool ValidateForm(out int termekId, out decimal menny, out decimal nettoEA, out decimal bruttoEA)
+    {
+        termekId = 0;
+        menny = 0;
+        nettoEA = 0;
+        bruttoEA = 0;
+
+        if (_selectedProductId is null) return false;
+        termekId = _selectedProductId.Value;
+
+        if (string.IsNullOrWhiteSpace(_nev)) return false;
+        if (string.IsNullOrWhiteSpace(_me)) return false;
+
+        if (_vatId == 0) return false;
+        if (string.IsNullOrWhiteSpace(_afaKod)) return false;
+
+        if (!TryParseDecimal(_mennyStr, out menny)) return false;
+        if (!TryParseDecimal(_nettoEAStr, out nettoEA)) return false;
+        if (!TryParseDecimal(_bruttoEAStr, out bruttoEA)) return false;
+
+        return true;
+    }
+
+    private static bool TryParseDecimal(string s, out decimal value)
+    {
+        s = (s ?? "").Trim().Replace(',', '.');
+        return decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool IsDecimal(string s) => TryParseDecimal(s, out _);
+
+    private string GetInputClass(bool invalid, bool required = false)
+    {
+        if (!_showErrors) return "";
+        return invalid ? "invalid-input" : "";
+    }
+
+    private string GetInputClass(string v, bool required = false, bool isDecimal = false)
+    {
+        if (!_showErrors) return "";
+
+        if (required && string.IsNullOrWhiteSpace(v)) return "invalid-input";
+        if (isDecimal && !IsDecimal(v)) return "invalid-input";
+
+        return "";
+    }
+
+    private static BevetelTetel Clone(BevetelTetel t) => new()
+    {
+        Id = t.Id,
+        Bizonylat = t.Bizonylat,
+        TermekId = t.TermekId,
+        Nev = t.Nev,
+        Me = t.Me,
+        AfaKod = t.AfaKod,
+        Mennyiseg = t.Mennyiseg,
+        NettoEgysegAr = t.NettoEgysegAr,
+        BruttoEgysegAr = t.BruttoEgysegAr,
+        NettoTetelErtek = t.NettoTetelErtek,
+        BruttoTetelErtek = t.BruttoTetelErtek
+    };
+}

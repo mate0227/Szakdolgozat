@@ -20,21 +20,24 @@ public class PartnerService
         try
         {
             var sql = @"
-                SELECT
-                    p.ID,
-                    p.CODE,
-                    p.NAME,
-                    p.IS_CUSTOMER,
-                    p.IS_SUPPLIER,
-                    p.COUNTRY,
-                    p.COUNTY,
-                    p.CITY,
-                    p.ADDRESS,
-                    p.EMAIL,
-                    p.PHONE,
-                    p.TAX_NUMBER
-                FROM PARTNERS p
-            ";
+                    SELECT
+                        p.ID,
+                        p.CODE,
+                        p.NAME,
+                        p.IS_CUSTOMER,
+                        p.IS_SUPPLIER,
+                        p.COUNTRY,
+                        p.COUNTY,
+                        p.CITY,
+                        p.ADDRESS,
+                        p.EMAIL,
+                        p.PHONE,
+                        p.TAX_NUMBER,
+                        p.POSTAL_CODE,
+                        p.IS_SALES_REP
+                    FROM PARTNERS p
+                ";
+
 
             if (search is not null)
             {
@@ -82,8 +85,11 @@ public class PartnerService
                     Address = r.GetString(8),
                     Email = r.IsDBNull(9) ? null : r.GetString(9),
                     Phone = r.IsDBNull(10) ? null : r.GetString(10),
-                    TaxNumber = r.IsDBNull(11) ? null : r.GetString(11)
+                    TaxNumber = r.IsDBNull(11) ? null : r.GetString(11),
+                    PostalCode = r.IsDBNull(12) ? "" : r.GetString(12),
+                    IsSalesRep = r.GetBoolean(13)
                 });
+
             }
 
             return result;
@@ -101,11 +107,12 @@ public class PartnerService
         {
             using var cmd = new FbCommand(@"
                 INSERT INTO PARTNERS
-                    (CODE, NAME, IS_CUSTOMER, IS_SUPPLIER, COUNTRY, COUNTY, CITY, ADDRESS, EMAIL, PHONE, TAX_NUMBER)
+                    (CODE, NAME, IS_CUSTOMER, IS_SUPPLIER, COUNTRY, COUNTY, CITY, ADDRESS, EMAIL, PHONE, TAX_NUMBER, POSTAL_CODE, IS_SALES_REP)
                 VALUES
-                    (@code, @name, @isCustomer, @isSupplier, @country, @county, @city, @address, @email, @phone, @tax)
+                    (@code, @name, @isCustomer, @isSupplier, @country, @county, @city, @address, @email, @phone, @tax, @postalCode, @isSalesRep)
                 RETURNING ID
             ", _connection);
+
 
             cmd.Parameters.AddWithValue("@code", (p.Code ?? "").Trim());
             cmd.Parameters.AddWithValue("@name", (p.Name ?? "").Trim());
@@ -115,6 +122,9 @@ public class PartnerService
             cmd.Parameters.AddWithValue("@county", (p.County ?? "").Trim());
             cmd.Parameters.AddWithValue("@city", (p.City ?? "").Trim());
             cmd.Parameters.AddWithValue("@address", (p.Address ?? "").Trim());
+            cmd.Parameters.AddWithValue("@postalCode", (p.PostalCode ?? "").Trim());
+            cmd.Parameters.AddWithValue("@isSalesRep", p.IsSalesRep);
+
 
             var email = string.IsNullOrWhiteSpace(p.Email) ? null : p.Email.Trim();
             var phone = string.IsNullOrWhiteSpace(p.Phone) ? null : p.Phone.Trim();
@@ -145,6 +155,8 @@ public class PartnerService
                     NAME = @name,
                     IS_CUSTOMER = @isCustomer,
                     IS_SUPPLIER = @isSupplier,
+                    IS_SALES_REP = @isSalesRep,
+                    POSTAL_CODE = @postalCode,
                     COUNTRY = @country,
                     COUNTY = @county,
                     CITY = @city,
@@ -155,6 +167,7 @@ public class PartnerService
                 WHERE ID = @id
             ", _connection);
 
+
             cmd.Parameters.AddWithValue("@id", p.Id);
             cmd.Parameters.AddWithValue("@code", (p.Code ?? "").Trim());
             cmd.Parameters.AddWithValue("@name", (p.Name ?? "").Trim());
@@ -164,6 +177,9 @@ public class PartnerService
             cmd.Parameters.AddWithValue("@county", (p.County ?? "").Trim());
             cmd.Parameters.AddWithValue("@city", (p.City ?? "").Trim());
             cmd.Parameters.AddWithValue("@address", (p.Address ?? "").Trim());
+            cmd.Parameters.AddWithValue("@isSalesRep", p.IsSalesRep);
+            cmd.Parameters.AddWithValue("@postalCode", (p.PostalCode ?? "").Trim());
+
 
             var email = string.IsNullOrWhiteSpace(p.Email) ? null : p.Email.Trim();
             var phone = string.IsNullOrWhiteSpace(p.Phone) ? null : p.Phone.Trim();

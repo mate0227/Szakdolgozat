@@ -40,7 +40,9 @@ builder.Services.AddScoped<ProductGroupService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<WarehouseService>();
 builder.Services.AddScoped<PartnerService>();
-
+builder.Services.AddScoped<VatService>();
+builder.Services.AddScoped<ProductPriceService>();
+builder.Services.AddScoped<BevetelService>();
 
 
 

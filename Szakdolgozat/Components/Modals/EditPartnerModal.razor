@@ -41,6 +41,19 @@
                 <input type="checkbox" @bind="Partner.IsSupplier" />
                 Szállító
             </label>
+            <label>
+                <input type="checkbox" @bind="Partner.IsSalesRep" />
+                Üzletkötő
+            </label>
+        </div>
+
+        <div class="form-row">
+            <label>Irányítószám</label>
+            <input @bind="Partner.PostalCode" class="@GetInputClass(Partner.PostalCode)" />
+            @if (ShowErrors && string.IsNullOrWhiteSpace(Partner.PostalCode))
+            {
+                <p class="field-error">Az irányítószám kitöltése kötelező!</p>
+            }
         </div>
 
         <div class="form-row">
@@ -121,6 +134,7 @@
 
         if (string.IsNullOrWhiteSpace(Partner.Code) ||
             string.IsNullOrWhiteSpace(Partner.Name) ||
+            string.IsNullOrWhiteSpace(Partner.PostalCode) ||
             string.IsNullOrWhiteSpace(Partner.Country) ||
             string.IsNullOrWhiteSpace(Partner.County) ||
             string.IsNullOrWhiteSpace(Partner.City) ||
@@ -139,6 +153,7 @@
 
         Partner.Code = Partner.Code.Trim();
         Partner.Name = Partner.Name.Trim();
+        Partner.PostalCode = Partner.PostalCode.Trim();
         Partner.Country = Partner.Country.Trim();
         Partner.County = Partner.County.Trim();
         Partner.City = Partner.City.Trim();

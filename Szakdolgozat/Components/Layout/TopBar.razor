@@ -21,7 +21,6 @@
                     <a class="menu-item" @onclick='() => Nav.NavigateTo("/partners")'>Partnerek</a>
                     <a class="menu-item" @onclick='() => Nav.NavigateTo("/productgroups")'>Termékcsoportok</a>
                     <a class="menu-item" @onclick='() => Nav.NavigateTo("/warehouses")'>Raktárak</a>
-                    <a class="menu-item">Eladási árak</a>
                 </div>
 
             </div>
@@ -33,7 +32,7 @@
                 <button class="menu-btn" type="button">Készlet ▾</button>
 
                 <div class="menu-panel @(ActiveMenu == "keszlet" ? "show" : "")">
-                    <a class="menu-item">Bevételezés</a>
+                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/bevetel")'>Bevételezés</a>
                     <a class="menu-item">Átadás</a>
                     <a class="menu-item">Kiadás</a>
                 </div>
@@ -102,7 +101,7 @@
             await LogService.AddLogAsync(
                 Session.CurrentUser.UserCode,
                 "LOGOUT",
-                "User logged out",
+                "Felhasználó kilépett",
                 page: "/logout",
                 ipAddress: ip
             );

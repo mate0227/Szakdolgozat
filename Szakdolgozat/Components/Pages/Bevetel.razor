@@ -1,0 +1,297 @@
+﻿@page "/bevetel"
+@using Szakdolgozat.Models
+@inject Services.UserSession Session
+@inject NavigationManager Nav
+@inject Services.BevetelService BevetelService
+@inject Services.LogService LogService
+@inject IHttpContextAccessor Http
+
+<h2>Bevételezés</h2>
+
+@if (!Session.IsLoggedIn)
+{
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
+}
+else
+{
+    <div class="p-toolbar">
+        <input class="p-search"
+               placeholder="Keresés (bizonylat, partner kód/név, dátum, valuta, megjegyzés, ID)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <button class="p-btn" type="button" @onclick="OpenAdd">Új bevétel</button>
+
+        <button class="p-btn secondary"
+                type="button"
+                @onclick="OpenEdit"
+                disabled="@(_selected is null || _loading)">
+            Módosítás
+        </button>
+
+        <button class="p-btn secondary"
+                type="button"
+                @onclick="OpenTetelek"
+                disabled="@(_selected is null || _loading)">
+            Tételek
+        </button>
+
+        <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (!string.IsNullOrEmpty(_error))
+    {
+        <p class="p-error">@_error</p>
+    }
+    else if (_items.Count == 0)
+    {
+        <p>Nincs bevételezés.</p>
+    }
+    else
+    {
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:80px;">ID</th>
+                        <th style="width:160px;">Bizonylat</th>
+                        <th style="width:130px;">Dátum</th>
+                        <th style="width:90px;">Lezárt</th>
+
+                        <th style="width:140px;">Partner kód</th>
+                        <th style="width:260px;">Partner név</th>
+                        <th style="width:120px;">Irsz</th>
+                        <th style="width:160px;">Város</th>
+                        <th style="width:260px;">Cím</th>
+
+                        <th style="width:100px;">Valuta</th>
+                        <th style="width:130px;">Árfolyam</th>
+
+                        <th style="width:160px;">Nettó</th>
+                        <th style="width:160px;">Bruttó</th>
+                        <th>Megjegyzés</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _items)
+                    {
+                        var selected = _selected?.Id == row.Id;
+
+                        <tr class="@(selected ? "row-selected" : "")"
+                            style="cursor:pointer;"
+                            @onclick="() => SelectRow(row)">
+                            <td>@row.Id</td>
+                            <td title="@row.Bizonylat">@row.Bizonylat</td>
+                            <td>@row.Datum.ToString("yyyy-MM-dd")</td>
+                            <td>@(row.Lezart ? "Igen" : "Nem")</td>
+
+                            <td title="@row.PartnerKod">@row.PartnerKod</td>
+                            <td title="@row.PartnerNev">@row.PartnerNev</td>
+                            <td title="@row.PartnerIrsz">@row.PartnerIrsz</td>
+                            <td title="@row.PartnerVaros">@row.PartnerVaros</td>
+                            <td title="@row.PartnerCim">@row.PartnerCim</td>
+
+                            <td>@row.Valuta</td>
+                            <td>@row.Arfolyam.ToString("0.####")</td>
+
+                            <td>@row.NettoErtek.ToString("0.00")</td>
+                            <td>@row.BruttoErtek.ToString("0.00")</td>
+
+                            <td title="@row.Megjegyzes">@row.Megjegyzes</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@if (_showAdd)
+{
+    <Szakdolgozat.Components.Modals.AddBevetelFejModal OnClose="CloseAdd"
+                                                       OnSave="HandleAdd"
+                                                       GenerateBizonylatAsync="BevetelService.GetNextBizonylatAsync"
+                                                       BizonylatExistsAsync="BevetelService.BizonylatExistsAsync" />
+
+}
+
+
+@if (_showEdit && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.EditBevetelFejModal Fej="_selected"
+                                                        OnClose="CloseEdit"
+                                                        OnSave="HandleEdit" />
+
+}
+
+@if (_showTetelek && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.BevetelTetelekModal Fej="_selected"
+                                                        OnClose="CloseTetelek"
+                                                        OnChanged="LoadAsync" />
+}
+
+
+
+@code {
+
+    private bool _showTetelek;
+
+    private void OpenTetelek()
+    {
+        if (_selected is null) return;
+        _showTetelek = true;
+    }
+
+    private void CloseTetelek() => _showTetelek = false;
+
+
+
+
+    private bool _loading = true;
+    private string _error = "";
+
+    private string _search = "";
+    private CancellationTokenSource? _searchCts;
+
+    private List<BevetelFej> _items = new();
+
+    private bool _showAdd;
+    private bool _showEdit;
+
+    private BevetelFej? _selected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+        StateHasChanged();
+
+        try
+        {
+            _items = await BevetelService.GetAllFejekAsync(_search, take: 500);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _items = new();
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Reload() => LoadAsync();
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void SelectRow(BevetelFej row)
+    {
+        _selected = new BevetelFej
+        {
+            Id = row.Id,
+            Bizonylat = row.Bizonylat,
+            Datum = row.Datum,
+            Lezart = row.Lezart,
+
+            PartnerKod = row.PartnerKod,
+            PartnerNev = row.PartnerNev,
+            PartnerIrsz = row.PartnerIrsz,
+            PartnerVaros = row.PartnerVaros,
+            PartnerCim = row.PartnerCim,
+
+            Megjegyzes = row.Megjegyzes,
+            Valuta = row.Valuta,
+            Arfolyam = row.Arfolyam,
+            NettoErtek = row.NettoErtek,
+            BruttoErtek = row.BruttoErtek
+        };
+    }
+
+    private void OpenAdd()
+    {
+        _showAdd = true;
+        _showEdit = false;
+    }
+
+    private void CloseAdd() => _showAdd = false;
+
+    private void OpenEdit()
+    {
+        if (_selected is null) return;
+        _showEdit = true;
+        _showAdd = false;
+    }
+
+    private void CloseEdit() => _showEdit = false;
+
+    private async Task HandleAdd(BevetelFej fej)
+    {
+        var id = await BevetelService.CreateFejAsync(fej);
+
+        await LogService.AddLogAsync(
+            Session.CurrentUser!.UserCode,
+            "CREATE_BEVETEL_FEJ",
+            $"Új bevételezés fej: Bizonylat={fej.Bizonylat} (ID={id})",
+            page: "/bevetel",
+            entityName: "BEVETEL_FEJ",
+            entityId: id.ToString(),
+            ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+        );
+
+        _showAdd = false;
+        _selected = null;
+        await LoadAsync();
+    }
+
+    private async Task HandleEdit(BevetelFej fej)
+    {
+        var ok = await BevetelService.UpdateFejAsync(fej);
+
+        if (ok)
+        {
+            await LogService.AddLogAsync(
+                Session.CurrentUser!.UserCode,
+                "UPDATE_BEVETEL_FEJ",
+                $"Bevételezés fej módosítva: Bizonylat={fej.Bizonylat} (ID={fej.Id})",
+                page: "/bevetel",
+                entityName: "BEVETEL_FEJ",
+                entityId: fej.Id.ToString(),
+                ipAddress: Http.HttpContext?.Connection?.RemoteIpAddress?.ToString()
+            );
+        }
+
+        _showEdit = false;
+        _selected = null;
+        await LoadAsync();
+    }
+}

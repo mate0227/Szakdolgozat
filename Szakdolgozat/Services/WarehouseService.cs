@@ -27,7 +27,8 @@ public class WarehouseService
                     w.IS_AUTOMATON,
                     w.COUNTY,
                     w.CITY,
-                    w.ADDRESS
+                    w.ADDRESS,
+                    w.POSTAL_CODE
                 FROM WAREHOUSES w
             ";
 
@@ -40,6 +41,7 @@ public class WarehouseService
                     OR UPPER(COALESCE(w.COUNTY, '')) CONTAINING UPPER(@s)
                     OR UPPER(COALESCE(w.CITY, '')) CONTAINING UPPER(@s)
                     OR UPPER(COALESCE(w.ADDRESS, '')) CONTAINING UPPER(@s)
+                    OR UPPER(COALESCE(w.POSTAL_CODE, '')) CONTAINING UPPER(@s)
                     OR CAST(w.ID AS VARCHAR(20)) CONTAINING @s
                 ";
             }
@@ -68,7 +70,8 @@ public class WarehouseService
                     IsAutomaton = r.GetBoolean(3),
                     County = r.GetString(4),
                     City = r.GetString(5),
-                    Address = r.GetString(6)
+                    Address = r.GetString(6),
+                    PostalCode = r.IsDBNull(7) ? "" : r.GetString(7)
                 });
             }
 
@@ -86,8 +89,8 @@ public class WarehouseService
         try
         {
             using var cmd = new FbCommand(@"
-                INSERT INTO WAREHOUSES (CODE, NAME, IS_AUTOMATON, COUNTY, CITY, ADDRESS)
-                VALUES (@code, @name, @isAuto, @county, @city, @address)
+                INSERT INTO WAREHOUSES (CODE, NAME, IS_AUTOMATON, COUNTY, CITY, ADDRESS, POSTAL_CODE)
+                VALUES (@code, @name, @isAuto, @county, @city, @address, @postalCode)
                 RETURNING ID
             ", _connection);
 
@@ -97,6 +100,7 @@ public class WarehouseService
             cmd.Parameters.AddWithValue("@county", (w.County ?? "").Trim());
             cmd.Parameters.AddWithValue("@city", (w.City ?? "").Trim());
             cmd.Parameters.AddWithValue("@address", (w.Address ?? "").Trim());
+            cmd.Parameters.AddWithValue("@postalCode", (w.PostalCode ?? "").Trim());
 
             var idObj = await cmd.ExecuteScalarAsync();
             return Convert.ToInt32(idObj);
@@ -119,7 +123,8 @@ public class WarehouseService
                     IS_AUTOMATON = @isAuto,
                     COUNTY = @county,
                     CITY = @city,
-                    ADDRESS = @address
+                    ADDRESS = @address,
+                    POSTAL_CODE = @postalCode
                 WHERE ID = @id
             ", _connection);
 
@@ -130,6 +135,7 @@ public class WarehouseService
             cmd.Parameters.AddWithValue("@county", (w.County ?? "").Trim());
             cmd.Parameters.AddWithValue("@city", (w.City ?? "").Trim());
             cmd.Parameters.AddWithValue("@address", (w.Address ?? "").Trim());
+            cmd.Parameters.AddWithValue("@postalCode", (w.PostalCode ?? "").Trim());
 
             var rows = await cmd.ExecuteNonQueryAsync();
             return rows > 0;
@@ -156,7 +162,6 @@ public class WarehouseService
             await _connection.CloseAsync();
         }
     }
-
 
     public async Task<bool> CodeExistsAsync(string code)
     {

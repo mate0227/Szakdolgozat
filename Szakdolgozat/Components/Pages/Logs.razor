@@ -115,9 +115,13 @@ else
 
         _logs = await LogService.GetLogsAsync(take: 200, search: _search);
 
+        // NEW: sort by time descending
+        _logs = _logs.OrderByDescending(x => x.CreatedAt).ToList();
+
         _loading = false;
         StateHasChanged();
     }
+
 
     private Task Reload() => LoadAsync();
 
