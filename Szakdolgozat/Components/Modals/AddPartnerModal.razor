@@ -4,29 +4,33 @@
     <div class="modal-window">
         <h3>Új partner</h3>
 
-        <div class="form-row">
-            <label>Kód</label>
-            <input @bind="Code" class="@GetCodeInputClass()" />
+        <!-- ROW 1 -->
+        <div class="grid-2">
+            <div class="form-row">
+                <label>Kód</label>
+                <input @bind="Code" class="@GetCodeInputClass()" />
 
-            @if (ShowErrors && string.IsNullOrWhiteSpace(Code))
-            {
-                <p class="field-error">A kód kitöltése kötelező!</p>
-            }
-            @if (!string.IsNullOrWhiteSpace(CodeError))
-            {
-                <p class="field-error">@CodeError</p>
-            }
+                @if (ShowErrors && string.IsNullOrWhiteSpace(Code))
+                {
+                    <p class="field-error">A kód kitöltése kötelező!</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(CodeError))
+                {
+                    <p class="field-error">@CodeError</p>
+                }
+            </div>
+
+            <div class="form-row">
+                <label>Név</label>
+                <input @bind="Name" class="@GetInputClass(Name)" />
+                @if (ShowErrors && string.IsNullOrWhiteSpace(Name))
+                {
+                    <p class="field-error">A név kitöltése kötelező!</p>
+                }
+            </div>
         </div>
 
-        <div class="form-row">
-            <label>Név</label>
-            <input @bind="Name" class="@GetInputClass(Name)" />
-            @if (ShowErrors && string.IsNullOrWhiteSpace(Name))
-            {
-                <p class="field-error">A név kitöltése kötelező!</p>
-            }
-        </div>
-
+        <!-- ROW 2 -->
         <div class="form-row checkbox-row">
             <label>
                 <input type="checkbox" @bind="IsCustomer" />
@@ -42,42 +46,48 @@
             </label>
         </div>
 
-        <div class="form-row">
-            <label>Irányítószám</label>
-            <input @bind="PostalCode" class="@GetInputClass(PostalCode)" />
-            @if (ShowErrors && string.IsNullOrWhiteSpace(PostalCode))
-            {
-                <p class="field-error">Az irányítószám kitöltése kötelező!</p>
-            }
+        <hr class="sep" />
+
+        <!-- ROW 3 -->
+        <div class="grid-4">
+            <div class="form-row">
+                <label>Irányítószám</label>
+                <input @bind="PostalCode" class="@GetInputClass(PostalCode)" />
+                @if (ShowErrors && string.IsNullOrWhiteSpace(PostalCode))
+                {
+                    <p class="field-error">Az irányítószám kitöltése kötelező!</p>
+                }
+            </div>
+
+            <div class="form-row">
+                <label>Ország</label>
+                <input @bind="Country" class="@GetInputClass(Country)" />
+                @if (ShowErrors && string.IsNullOrWhiteSpace(Country))
+                {
+                    <p class="field-error">Az ország kitöltése kötelező!</p>
+                }
+            </div>
+
+            <div class="form-row">
+                <label>Megye</label>
+                <input @bind="County" class="@GetInputClass(County)" />
+                @if (ShowErrors && string.IsNullOrWhiteSpace(County))
+                {
+                    <p class="field-error">A megye kitöltése kötelező!</p>
+                }
+            </div>
+
+            <div class="form-row">
+                <label>Város</label>
+                <input @bind="City" class="@GetInputClass(City)" />
+                @if (ShowErrors && string.IsNullOrWhiteSpace(City))
+                {
+                    <p class="field-error">A város kitöltése kötelező!</p>
+                }
+            </div>
         </div>
 
-        <div class="form-row">
-            <label>Ország</label>
-            <input @bind="Country" class="@GetInputClass(Country)" />
-            @if (ShowErrors && string.IsNullOrWhiteSpace(Country))
-            {
-                <p class="field-error">Az ország kitöltése kötelező!</p>
-            }
-        </div>
-
-        <div class="form-row">
-            <label>Megye</label>
-            <input @bind="County" class="@GetInputClass(County)" />
-            @if (ShowErrors && string.IsNullOrWhiteSpace(County))
-            {
-                <p class="field-error">A megye kitöltése kötelező!</p>
-            }
-        </div>
-
-        <div class="form-row">
-            <label>Város</label>
-            <input @bind="City" class="@GetInputClass(City)" />
-            @if (ShowErrors && string.IsNullOrWhiteSpace(City))
-            {
-                <p class="field-error">A város kitöltése kötelező!</p>
-            }
-        </div>
-
+        <!-- ROW 4 -->
         <div class="form-row">
             <label>Cím</label>
             <input @bind="Address" class="@GetInputClass(Address)" />
@@ -87,19 +97,24 @@
             }
         </div>
 
-        <div class="form-row">
-            <label>Email (opcionális)</label>
-            <input @bind="Email" />
-        </div>
+        <hr class="sep" />
 
-        <div class="form-row">
-            <label>Telefon (opcionális)</label>
-            <input @bind="Phone" />
-        </div>
+        <!-- ROW 5 -->
+        <div class="grid-3">
+            <div class="form-row">
+                <label>Email (opcionális)</label>
+                <input @bind="Email" />
+            </div>
 
-        <div class="form-row">
-            <label>Adószám (opcionális)</label>
-            <input @bind="TaxNumber" />
+            <div class="form-row">
+                <label>Telefon (opcionális)</label>
+                <input @bind="Phone" />
+            </div>
+
+            <div class="form-row">
+                <label>Adószám (opcionális)</label>
+                <input @bind="TaxNumber" />
+            </div>
         </div>
 
         <div class="button-row">
@@ -113,7 +128,6 @@
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<Partner> OnSave { get; set; }
 
-    // PartnerService.CodeExistsAsync
     [Parameter] public Func<string, Task<bool>>? CodeExistsAsync { get; set; }
 
     public bool ShowErrors { get; set; }

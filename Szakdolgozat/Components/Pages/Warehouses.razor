@@ -21,6 +21,21 @@ else
                @oninput="OnSearchInput" />
 
         <button class="p-btn" type="button" @onclick="OpenAdd">Új raktár</button>
+
+        <button class="p-btn secondary"
+                type="button"
+                @onclick="OpenEdit"
+                disabled="@(_selected is null || _loading)">
+            Módosítás
+        </button>
+
+        <button class="p-btn secondary danger"
+                type="button"
+                @onclick="OpenDelete"
+                disabled="@(_selected is null || _loading)">
+            Törlés
+        </button>
+
         <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
     </div>
 
@@ -50,13 +65,16 @@ else
                         <th style="width:160px;">Város</th>
                         <th style="width:140px;">Irányítószám</th>
                         <th>Cím</th>
-                        <th style="width:220px;">Kezelés</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var w in _items)
                     {
-                        <tr>
+                        var selected = _selected?.Id == w.Id;
+
+                        <tr class="@(selected ? "row-selected" : "")"
+                            style="cursor:pointer;"
+                            @onclick="() => SelectRow(w)">
                             <td>@w.Id</td>
                             <td title="@w.Code">@w.Code</td>
                             <td title="@w.Name">@w.Name</td>
@@ -65,10 +83,6 @@ else
                             <td title="@w.City">@w.City</td>
                             <td title="@w.PostalCode">@w.PostalCode</td>
                             <td title="@w.Address">@w.Address</td>
-                            <td>
-                                <button class="table-btn edit" type="button" @onclick="() => OpenEdit(w)">Módosítás</button>
-                                <button class="table-btn delete" type="button" @onclick="() => OpenDelete(w)">Törlés</button>
-                            </td>
                         </tr>
                     }
                 </tbody>
@@ -134,11 +148,15 @@ else
         try
         {
             _items = await WarehouseService.GetAllAsync(_search, take: 500);
+
+            if (_selected is not null && !_items.Any(x => x.Id == _selected.Id))
+                _selected = null;
         }
         catch (Exception ex)
         {
             _error = ex.Message;
             _items = new();
+            _selected = null;
         }
 
         _loading = false;
@@ -163,6 +181,21 @@ else
         catch (TaskCanceledException) { }
     }
 
+    private void SelectRow(Warehouse w)
+    {
+        _selected = new Warehouse
+        {
+            Id = w.Id,
+            Code = w.Code,
+            Name = w.Name,
+            IsAutomaton = w.IsAutomaton,
+            County = w.County,
+            City = w.City,
+            PostalCode = w.PostalCode,
+            Address = w.Address
+        };
+    }
+
     private void OpenAdd()
     {
         _showAdd = true;
@@ -172,40 +205,18 @@ else
 
     private void CloseAdd() => _showAdd = false;
 
-    private void OpenEdit(Warehouse w)
+    private void OpenEdit()
     {
-        _selected = new Warehouse
-        {
-            Id = w.Id,
-            Code = w.Code,
-            Name = w.Name,
-            IsAutomaton = w.IsAutomaton,
-            County = w.County,
-            City = w.City,
-            PostalCode = w.PostalCode,
-            Address = w.Address
-        };
-
+        if (_selected is null) return;
         _showEdit = true;
         _showAdd = _showDelete = false;
     }
 
     private void CloseEdit() => _showEdit = false;
 
-    private void OpenDelete(Warehouse w)
+    private void OpenDelete()
     {
-        _selected = new Warehouse
-        {
-            Id = w.Id,
-            Code = w.Code,
-            Name = w.Name,
-            IsAutomaton = w.IsAutomaton,
-            County = w.County,
-            City = w.City,
-            PostalCode = w.PostalCode,
-            Address = w.Address
-        };
-
+        if (_selected is null) return;
         _showDelete = true;
         _showAdd = _showEdit = false;
     }
@@ -227,6 +238,7 @@ else
         );
 
         _showAdd = false;
+        _selected = null;
         await LoadAsync();
     }
 
@@ -247,6 +259,7 @@ else
         }
 
         _showEdit = false;
+        _selected = null;
         await LoadAsync();
     }
 
@@ -270,6 +283,7 @@ else
         }
 
         _showDelete = false;
+        _selected = null;
         await LoadAsync();
     }
 }

@@ -232,4 +232,72 @@ public class ProductPriceService
             await _connection.CloseAsync();
         }
     }
+
+    public async Task<ProductPriceItem?> GetCurrentForProductAsync(int productId, string? currency = null)
+    {
+        currency = string.IsNullOrWhiteSpace(currency) ? null : currency.Trim().ToUpperInvariant();
+
+        await _connection.OpenAsync();
+        try
+        {
+            var sql = @"
+            SELECT
+                pp.ID,
+                pp.PRODUCT_ID,
+                pp.VAT_ID,
+                COALESCE(v.CODE, '') AS VAT_CODE,
+                COALESCE(v.NAME, '') AS VAT_NAME,
+                pp.NET_PRICE,
+                pp.GROSS_PRICE,
+                pp.CURRENCY,
+                pp.VALID_FROM,
+                pp.VALID_TO,
+                pp.CREATED_AT
+            FROM PRODUCT_PRICES pp
+            LEFT JOIN VAT v ON v.ID = pp.VAT_ID
+            WHERE pp.PRODUCT_ID = @pid
+              AND (pp.VALID_TO IS NULL OR pp.VALID_TO > CURRENT_TIMESTAMP)
+              AND pp.VALID_FROM <= CURRENT_TIMESTAMP
+        ";
+
+            if (currency is not null)
+            {
+                sql += @"
+              AND UPPER(pp.CURRENCY) = @cur
+            ";
+            }
+
+            sql += @"
+            ORDER BY pp.VALID_FROM DESC, pp.ID DESC
+            ROWS 1
+        ";
+
+            using var cmd = new FbCommand(sql, _connection);
+            cmd.Parameters.AddWithValue("@pid", productId);
+            if (currency is not null)
+                cmd.Parameters.AddWithValue("@cur", currency);
+
+            using var r = await cmd.ExecuteReaderAsync();
+            if (!await r.ReadAsync()) return null;
+
+            return new ProductPriceItem
+            {
+                Id = r.GetInt32(0),
+                ProductId = r.GetInt32(1),
+                VatId = r.GetInt32(2),
+                VatCode = r.GetString(3),
+                VatName = r.GetString(4),
+                NetPrice = r.GetDecimal(5),
+                GrossPrice = r.GetDecimal(6),
+                Currency = r.GetString(7),
+                ValidFrom = r.GetDateTime(8),
+                ValidTo = r.IsDBNull(9) ? null : r.GetDateTime(9),
+                CreatedAt = r.GetDateTime(10)
+            };
+        }
+        finally
+        {
+            await _connection.CloseAsync();
+        }
+    }
 }

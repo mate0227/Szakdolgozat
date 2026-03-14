@@ -1,0 +1,182 @@
+﻿@page "/forgalom"
+@using Szakdolgozat.Models
+@inject Services.ForgalomService ForgalomService
+
+<h2>Forgalom</h2>
+
+<div class="p-toolbar" style="gap:10px; flex-wrap:wrap;">
+    <input class="p-search"
+           placeholder="Keresés (cikkszám, termék név, ME, ID)..."
+           value="@_search"
+           @oninput="OnSearchInput" />
+
+    <div style="display:flex; align-items:center; gap:8px;">
+        <span style="white-space:nowrap;">Dátumtól</span>
+        <input type="date"
+               value="@_dateFromStr"
+               @onchange="OnDateFromChanged"
+               disabled="@_loading" />
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px;">
+        <span style="white-space:nowrap;">Dátumig</span>
+        <input type="date"
+               value="@_dateToStr"
+               @onchange="OnDateToChanged"
+               disabled="@_loading" />
+    </div>
+
+    <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
+</div>
+
+@if (_loading)
+{
+    <p>Betöltés...</p>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <p class="p-error">@_error</p>
+}
+else if (_rows.Count == 0)
+{
+    <p>Nincs adat.</p>
+}
+else
+{
+    <div class="p-table-wrap">
+        <table class="p-table">
+            <thead>
+                <tr>
+                    <th style="width:90px;">ID</th>
+                    <th style="width:180px;">Cikkszám</th>
+                    <th>Termék név</th>
+                    <th style="width:100px;">ME</th>
+                    <th style="width:160px;">Forgalom menny.</th>
+                    <th style="width:160px;">Forgalom nettó</th>
+                    <th style="width:160px;">Forgalom bruttó</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _rows)
+                {
+                    <tr style="cursor:pointer;"
+                        @onclick="() => OpenDetails(r)">
+                        <td>@r.ProductId</td>
+                        <td title="@r.ProductCode">@r.ProductCode</td>
+                        <td title="@r.ProductName">@r.ProductName</td>
+                        <td title="@r.Unit">@r.Unit</td>
+                        <td>@r.ForgalomQty.ToString("0.####")</td>
+                        <td>@r.ForgalomNet.ToString("0.00")</td>
+                        <td>@r.ForgalomGross.ToString("0.00")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (_showDetails && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.ForgalomDetailsModal Product="_selected"
+                                                         DateFrom="_dateFrom"
+                                                         DateTo="_dateTo"
+                                                         OnClose="CloseDetails" />
+}
+
+@code {
+    private bool _loading = true;
+    private string _error = "";
+    private string _search = "";
+    private CancellationTokenSource? _cts;
+
+    private DateTime _dateFrom = DateTime.Today.AddMonths(-1);
+    private DateTime _dateTo = DateTime.Today;
+
+    private string _dateFromStr = DateTime.Today.AddMonths(-1).ToString("yyyy-MM-dd");
+    private string _dateToStr = DateTime.Today.ToString("yyyy-MM-dd");
+
+    private List<ForgalomSummaryRow> _rows = new();
+
+    private bool _showDetails;
+    private ForgalomSummaryRow? _selected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task OnDateFromChanged(ChangeEventArgs e)
+    {
+        _dateFromStr = e.Value?.ToString() ?? "";
+
+        if (DateTime.TryParse(_dateFromStr, out var dt))
+            _dateFrom = dt.Date;
+
+        await LoadAsync();
+    }
+
+    private async Task OnDateToChanged(ChangeEventArgs e)
+    {
+        _dateToStr = e.Value?.ToString() ?? "";
+
+        if (DateTime.TryParse(_dateToStr, out var dt))
+            _dateTo = dt.Date;
+
+        await LoadAsync();
+    }
+
+    private Task Reload() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+        StateHasChanged();
+
+        try
+        {
+            _rows = await ForgalomService.GetSummaryAsync(
+                dateFrom: _dateFrom,
+                dateTo: _dateTo,
+                search: _search,
+                take: 5000
+            );
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _rows = new();
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private void OpenDetails(ForgalomSummaryRow row)
+    {
+        _selected = row;
+        _showDetails = true;
+    }
+
+    private void CloseDetails()
+    {
+        _showDetails = false;
+        _selected = null;
+    }
+}

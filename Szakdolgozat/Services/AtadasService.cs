@@ -4,16 +4,16 @@ using Szakdolgozat.Models;
 
 namespace Szakdolgozat.Services;
 
-public class BevetelService
+public class AtadasService
 {
     private readonly FbConnection _connection;
 
-    public BevetelService(FbConnection connection)
+    public AtadasService(FbConnection connection)
     {
         _connection = connection;
     }
 
-    public async Task<List<BevetelFej>> GetAllFejekAsync(string? search = null, int take = 500)
+    public async Task<List<AtadasFej>> GetAllFejekAsync(string? search = null, int take = 500)
     {
         search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
 
@@ -36,7 +36,7 @@ public class BevetelService
                     f.ARFOLYAM,
                     f.NETTO_ERTEK,
                     f.BRUTTO_ERTEK
-                FROM BEVETEL_FEJ f
+                FROM ATADAS_FEJ f
             ";
 
             if (search is not null)
@@ -48,6 +48,7 @@ public class BevetelService
                     OR UPPER(COALESCE(f.PARTNER_NEV, '')) CONTAINING UPPER(@s)
                     OR UPPER(COALESCE(f.PARTNER_VAROS, '')) CONTAINING UPPER(@s)
                     OR UPPER(COALESCE(f.PARTNER_CIM, '')) CONTAINING UPPER(@s)
+                    OR UPPER(COALESCE(f.MEGJEGYZES, '')) CONTAINING UPPER(@s)
                     OR CAST(f.ID AS VARCHAR(20)) CONTAINING @s
                 ";
             }
@@ -59,15 +60,13 @@ public class BevetelService
 
             using var cmd = new FbCommand(sql, _connection);
             cmd.Parameters.AddWithValue("@take", take);
-            if (search is not null)
-                cmd.Parameters.AddWithValue("@s", search);
+            if (search is not null) cmd.Parameters.AddWithValue("@s", search);
 
-            var result = new List<BevetelFej>();
+            var list = new List<AtadasFej>();
             using var r = await cmd.ExecuteReaderAsync();
-
             while (await r.ReadAsync())
             {
-                result.Add(new BevetelFej
+                list.Add(new AtadasFej
                 {
                     Id = r.GetInt32(0),
                     Bizonylat = r.GetString(1),
@@ -90,7 +89,7 @@ public class BevetelService
                 });
             }
 
-            return result;
+            return list;
         }
         finally
         {
@@ -98,7 +97,7 @@ public class BevetelService
         }
     }
 
-    public async Task<BevetelFej?> GetFejByIdAsync(int id)
+    public async Task<AtadasFej?> GetFejByIdAsync(int id)
     {
         await _connection.OpenAsync();
         try
@@ -119,7 +118,7 @@ public class BevetelService
                     f.ARFOLYAM,
                     f.NETTO_ERTEK,
                     f.BRUTTO_ERTEK
-                FROM BEVETEL_FEJ f
+                FROM ATADAS_FEJ f
                 WHERE f.ID = @id
                 ROWS 1
             ", _connection);
@@ -129,7 +128,7 @@ public class BevetelService
             using var r = await cmd.ExecuteReaderAsync();
             if (!await r.ReadAsync()) return null;
 
-            return new BevetelFej
+            return new AtadasFej
             {
                 Id = r.GetInt32(0),
                 Bizonylat = r.GetString(1),
@@ -157,7 +156,7 @@ public class BevetelService
         }
     }
 
-    public async Task<BevetelFej?> GetFejByBizonylatAsync(string bizonylat)
+    public async Task<AtadasFej?> GetFejByBizonylatAsync(string bizonylat)
     {
         bizonylat = (bizonylat ?? "").Trim();
         if (bizonylat.Length == 0) return null;
@@ -181,7 +180,7 @@ public class BevetelService
                     f.ARFOLYAM,
                     f.NETTO_ERTEK,
                     f.BRUTTO_ERTEK
-                FROM BEVETEL_FEJ f
+                FROM ATADAS_FEJ f
                 WHERE f.BIZONYLAT = @b
                 ROWS 1
             ", _connection);
@@ -191,7 +190,7 @@ public class BevetelService
             using var r = await cmd.ExecuteReaderAsync();
             if (!await r.ReadAsync()) return null;
 
-            return new BevetelFej
+            return new AtadasFej
             {
                 Id = r.GetInt32(0),
                 Bizonylat = r.GetString(1),
@@ -219,13 +218,13 @@ public class BevetelService
         }
     }
 
-    public async Task<int> CreateFejAsync(BevetelFej f)
+    public async Task<int> CreateFejAsync(AtadasFej f)
     {
         await _connection.OpenAsync();
         try
         {
             using var cmd = new FbCommand(@"
-                INSERT INTO BEVETEL_FEJ
+                INSERT INTO ATADAS_FEJ
                     (BIZONYLAT, DATUM, LEZART,
                      PARTNER_KOD, PARTNER_NEV, PARTNER_IRSZ, PARTNER_VAROS, PARTNER_CIM,
                      MEGJEGYZES,
@@ -268,13 +267,13 @@ public class BevetelService
         }
     }
 
-    public async Task<bool> UpdateFejAsync(BevetelFej f)
+    public async Task<bool> UpdateFejAsync(AtadasFej f)
     {
         await _connection.OpenAsync();
         try
         {
             using var cmd = new FbCommand(@"
-                UPDATE BEVETEL_FEJ
+                UPDATE ATADAS_FEJ
                 SET
                     BIZONYLAT = @b,
                     DATUM = @datum,
@@ -331,7 +330,7 @@ public class BevetelService
         {
             using var cmd = new FbCommand(@"
                 SELECT 1
-                FROM BEVETEL_FEJ
+                FROM ATADAS_FEJ
                 WHERE BIZONYLAT = @b
                 ROWS 1
             ", _connection);
@@ -347,10 +346,57 @@ public class BevetelService
         }
     }
 
-    public async Task<List<BevetelTetel>> GetTetelekAsync(string bizonylat)
+    public async Task<bool> BizonylatExistsForOtherAsync(int id, string bizonylat)
     {
         bizonylat = (bizonylat ?? "").Trim();
-        if (bizonylat.Length == 0) return new List<BevetelTetel>();
+        if (bizonylat.Length == 0) return false;
+
+        await _connection.OpenAsync();
+        try
+        {
+            using var cmd = new FbCommand(@"
+                SELECT 1
+                FROM ATADAS_FEJ
+                WHERE BIZONYLAT = @b
+                  AND ID <> @id
+                ROWS 1
+            ", _connection);
+
+            cmd.Parameters.AddWithValue("@b", bizonylat);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            var obj = await cmd.ExecuteScalarAsync();
+            return obj != null;
+        }
+        finally
+        {
+            await _connection.CloseAsync();
+        }
+    }
+
+    public async Task<string> GetNextBizonylatAsync()
+    {
+        await _connection.OpenAsync();
+        try
+        {
+            using var cmd = new FbCommand(
+                "SELECT NEXT VALUE FOR ATADAS_BIZONYLAT_SEQ FROM RDB$DATABASE",
+                _connection);
+
+            var obj = await cmd.ExecuteScalarAsync();
+            var n = Convert.ToInt64(obj, CultureInfo.InvariantCulture);
+            return $"AT-{n:0000000}";
+        }
+        finally
+        {
+            await _connection.CloseAsync();
+        }
+    }
+
+    public async Task<List<AtadasTetel>> GetTetelekAsync(string bizonylat)
+    {
+        bizonylat = (bizonylat ?? "").Trim();
+        if (bizonylat.Length == 0) return new List<AtadasTetel>();
 
         await _connection.OpenAsync();
         try
@@ -360,7 +406,8 @@ public class BevetelService
                     t.ID,
                     t.BIZONYLAT,
                     t.TERMEK_ID,
-                    t.WAREHOUSE_ID,
+                    t.WAREHOUSE_FROM_ID,
+                    t.WAREHOUSE_TO_ID,
                     t.NEV,
                     t.ME,
                     t.AFAKOD,
@@ -369,36 +416,36 @@ public class BevetelService
                     t.BRUTTO_EGYSEGAR,
                     t.NETTO_TETELERTEK,
                     t.BRUTTO_TETELERTEK
-                FROM BEVETEL_TETEL t
+                FROM ATADAS_TETEL t
                 WHERE t.BIZONYLAT = @b
                 ORDER BY t.ID
             ", _connection);
 
             cmd.Parameters.AddWithValue("@b", bizonylat);
 
-            var result = new List<BevetelTetel>();
+            var list = new List<AtadasTetel>();
             using var r = await cmd.ExecuteReaderAsync();
-
             while (await r.ReadAsync())
             {
-                result.Add(new BevetelTetel
+                list.Add(new AtadasTetel
                 {
                     Id = r.GetInt32(0),
                     Bizonylat = r.GetString(1),
                     TermekId = r.GetInt32(2),
-                    WarehouseId = r.GetInt32(3),
-                    Nev = r.GetString(4),
-                    Me = r.GetString(5),
-                    AfaKod = r.GetString(6),
-                    Mennyiseg = r.GetDecimal(7),
-                    NettoEgysegAr = r.GetDecimal(8),
-                    BruttoEgysegAr = r.GetDecimal(9),
-                    NettoTetelErtek = r.GetDecimal(10),
-                    BruttoTetelErtek = r.GetDecimal(11),
+                    WarehouseFromId = r.GetInt32(3),
+                    WarehouseToId = r.GetInt32(4),
+                    Nev = r.GetString(5),
+                    Me = r.GetString(6),
+                    AfaKod = r.GetString(7),
+                    Mennyiseg = r.GetDecimal(8),
+                    NettoEgysegAr = r.GetDecimal(9),
+                    BruttoEgysegAr = r.GetDecimal(10),
+                    NettoTetelErtek = r.GetDecimal(11),
+                    BruttoTetelErtek = r.GetDecimal(12),
                 });
             }
 
-            return result;
+            return list;
         }
         finally
         {
@@ -406,7 +453,7 @@ public class BevetelService
         }
     }
 
-    public async Task<int> CreateTetelAsync(BevetelTetel t)
+    public async Task<int> CreateTetelAsync(AtadasTetel t)
     {
         await _connection.OpenAsync();
         FbTransaction? tx = null;
@@ -415,17 +462,18 @@ public class BevetelService
         {
             tx = await _connection.BeginTransactionAsync();
 
-            var warehouseCode = await GetWarehouseCodeByIdAsync(t.WarehouseId, tx);
+            var fromCode = await GetWarehouseCodeByIdAsync(t.WarehouseFromId, tx);
+            var toCode = await GetWarehouseCodeByIdAsync(t.WarehouseToId, tx);
             var productCode = await GetProductCodeByIdAsync(t.TermekId, tx);
 
             using var cmd = new FbCommand(@"
-                INSERT INTO BEVETEL_TETEL
-                    (BIZONYLAT, TERMEK_ID, WAREHOUSE_ID, NEV, ME, AFAKOD,
+                INSERT INTO ATADAS_TETEL
+                    (BIZONYLAT, TERMEK_ID, WAREHOUSE_FROM_ID, WAREHOUSE_TO_ID, NEV, ME, AFAKOD,
                      MENNYISEG,
                      NETTO_EGYSEGAR, BRUTTO_EGYSEGAR,
                      NETTO_TETELERTEK, BRUTTO_TETELERTEK)
                 VALUES
-                    (@b, @tid, @wid, @nev, @me, @afa,
+                    (@b, @tid, @wf, @wt, @nev, @me, @afa,
                      @menny,
                      @ne, @be,
                      @nte, @bte)
@@ -434,7 +482,8 @@ public class BevetelService
 
             cmd.Parameters.AddWithValue("@b", (t.Bizonylat ?? "").Trim());
             cmd.Parameters.AddWithValue("@tid", t.TermekId);
-            cmd.Parameters.AddWithValue("@wid", t.WarehouseId);
+            cmd.Parameters.AddWithValue("@wf", t.WarehouseFromId);
+            cmd.Parameters.AddWithValue("@wt", t.WarehouseToId);
             cmd.Parameters.AddWithValue("@nev", (t.Nev ?? "").Trim());
             cmd.Parameters.AddWithValue("@me", (t.Me ?? "").Trim());
             cmd.Parameters.AddWithValue("@afa", (t.AfaKod ?? "").Trim());
@@ -447,7 +496,8 @@ public class BevetelService
             var idObj = await cmd.ExecuteScalarAsync();
             var newId = Convert.ToInt32(idObj);
 
-            await AddToStockAsync(warehouseCode, productCode, t.Mennyiseg, tx);
+            await AddToStockAsync(fromCode, productCode, -t.Mennyiseg, tx);
+            await AddToStockAsync(toCode, productCode, +t.Mennyiseg, tx);
 
             await tx.CommitAsync();
             return newId;
@@ -463,7 +513,7 @@ public class BevetelService
         }
     }
 
-    public async Task<bool> UpdateTetelAsync(BevetelTetel t)
+    public async Task<bool> UpdateTetelAsync(AtadasTetel t)
     {
         await _connection.OpenAsync();
         FbTransaction? tx = null;
@@ -472,13 +522,14 @@ public class BevetelService
         {
             tx = await _connection.BeginTransactionAsync();
 
-            int oldWarehouseId;
+            int oldFromId;
+            int oldToId;
             int oldTermekId;
             decimal oldQty;
 
             using (var q = new FbCommand(@"
-                SELECT WAREHOUSE_ID, TERMEK_ID, MENNYISEG
-                FROM BEVETEL_TETEL
+                SELECT WAREHOUSE_FROM_ID, WAREHOUSE_TO_ID, TERMEK_ID, MENNYISEG
+                FROM ATADAS_TETEL
                 WHERE ID = @id
                 ROWS 1
             ", _connection, tx))
@@ -487,17 +538,19 @@ public class BevetelService
                 using var r = await q.ExecuteReaderAsync();
                 if (!await r.ReadAsync()) return false;
 
-                oldWarehouseId = r.GetInt32(0);
-                oldTermekId = r.GetInt32(1);
-                oldQty = r.GetDecimal(2);
+                oldFromId = r.GetInt32(0);
+                oldToId = r.GetInt32(1);
+                oldTermekId = r.GetInt32(2);
+                oldQty = r.GetDecimal(3);
             }
 
             using (var cmd = new FbCommand(@"
-                UPDATE BEVETEL_TETEL
+                UPDATE ATADAS_TETEL
                 SET
                     BIZONYLAT = @b,
                     TERMEK_ID = @tid,
-                    WAREHOUSE_ID = @wid,
+                    WAREHOUSE_FROM_ID = @wf,
+                    WAREHOUSE_TO_ID = @wt,
                     NEV = @nev,
                     ME = @me,
                     AFAKOD = @afa,
@@ -512,7 +565,8 @@ public class BevetelService
                 cmd.Parameters.AddWithValue("@id", t.Id);
                 cmd.Parameters.AddWithValue("@b", (t.Bizonylat ?? "").Trim());
                 cmd.Parameters.AddWithValue("@tid", t.TermekId);
-                cmd.Parameters.AddWithValue("@wid", t.WarehouseId);
+                cmd.Parameters.AddWithValue("@wf", t.WarehouseFromId);
+                cmd.Parameters.AddWithValue("@wt", t.WarehouseToId);
                 cmd.Parameters.AddWithValue("@nev", (t.Nev ?? "").Trim());
                 cmd.Parameters.AddWithValue("@me", (t.Me ?? "").Trim());
                 cmd.Parameters.AddWithValue("@afa", (t.AfaKod ?? "").Trim());
@@ -526,25 +580,36 @@ public class BevetelService
                 if (rows == 0) return false;
             }
 
-            var oldWhCode = await GetWarehouseCodeByIdAsync(oldWarehouseId, tx);
+            var oldFromCode = await GetWarehouseCodeByIdAsync(oldFromId, tx);
+            var oldToCode = await GetWarehouseCodeByIdAsync(oldToId, tx);
             var oldProdCode = await GetProductCodeByIdAsync(oldTermekId, tx);
 
-            var newWhCode = await GetWarehouseCodeByIdAsync(t.WarehouseId, tx);
+            var newFromCode = await GetWarehouseCodeByIdAsync(t.WarehouseFromId, tx);
+            var newToCode = await GetWarehouseCodeByIdAsync(t.WarehouseToId, tx);
             var newProdCode = await GetProductCodeByIdAsync(t.TermekId, tx);
 
-            if (oldWhCode == newWhCode && oldProdCode == newProdCode)
+            if (oldFromCode == newFromCode && oldToCode == newToCode && oldProdCode == newProdCode)
             {
                 var diff = t.Mennyiseg - oldQty;
                 if (diff != 0m)
-                    await AddToStockAsync(newWhCode, newProdCode, diff, tx);
+                {
+                    await AddToStockAsync(newFromCode, newProdCode, -diff, tx);
+                    await AddToStockAsync(newToCode, newProdCode, +diff, tx);
+                }
             }
             else
             {
                 if (oldQty != 0m)
-                    await AddToStockAsync(oldWhCode, oldProdCode, -oldQty, tx);
+                {
+                    await AddToStockAsync(oldFromCode, oldProdCode, +oldQty, tx);
+                    await AddToStockAsync(oldToCode, oldProdCode, -oldQty, tx);
+                }
 
                 if (t.Mennyiseg != 0m)
-                    await AddToStockAsync(newWhCode, newProdCode, t.Mennyiseg, tx);
+                {
+                    await AddToStockAsync(newFromCode, newProdCode, -t.Mennyiseg, tx);
+                    await AddToStockAsync(newToCode, newProdCode, +t.Mennyiseg, tx);
+                }
             }
 
             await tx.CommitAsync();
@@ -570,40 +635,44 @@ public class BevetelService
         {
             tx = await _connection.BeginTransactionAsync();
 
-            int warehouseId;
+            int fromId;
+            int toId;
             int termekId;
             decimal qty;
 
             using (var q = new FbCommand(@"
-                SELECT WAREHOUSE_ID, TERMEK_ID, MENNYISEG
-                FROM BEVETEL_TETEL
+                SELECT WAREHOUSE_FROM_ID, WAREHOUSE_TO_ID, TERMEK_ID, MENNYISEG
+                FROM ATADAS_TETEL
                 WHERE ID = @id
                 ROWS 1
             ", _connection, tx))
             {
                 q.Parameters.AddWithValue("@id", id);
-
                 using var r = await q.ExecuteReaderAsync();
                 if (!await r.ReadAsync()) return false;
 
-                warehouseId = r.GetInt32(0);
-                termekId = r.GetInt32(1);
-                qty = r.GetDecimal(2);
+                fromId = r.GetInt32(0);
+                toId = r.GetInt32(1);
+                termekId = r.GetInt32(2);
+                qty = r.GetDecimal(3);
             }
 
-            using (var cmd = new FbCommand(@"DELETE FROM BEVETEL_TETEL WHERE ID = @id", _connection, tx))
+            using (var cmd = new FbCommand(@"DELETE FROM ATADAS_TETEL WHERE ID = @id", _connection, tx))
             {
                 cmd.Parameters.AddWithValue("@id", id);
                 var rows = await cmd.ExecuteNonQueryAsync();
                 if (rows == 0) return false;
             }
 
-            var whCode = await GetWarehouseCodeByIdAsync(warehouseId, tx);
-            var prodCode = await GetProductCodeByIdAsync(termekId, tx);
+            var fromCode = await GetWarehouseCodeByIdAsync(fromId, tx);
+            var toCode = await GetWarehouseCodeByIdAsync(toId, tx);
+            var productCode = await GetProductCodeByIdAsync(termekId, tx);
 
-            // STOCK DECREASE
             if (qty != 0m)
-                await AddToStockAsync(whCode, prodCode, -qty, tx);
+            {
+                await AddToStockAsync(fromCode, productCode, +qty, tx);
+                await AddToStockAsync(toCode, productCode, -qty, tx);
+            }
 
             await tx.CommitAsync();
             return true;
@@ -634,7 +703,7 @@ public class BevetelService
                 SELECT
                     COALESCE(SUM(t.NETTO_TETELERTEK), 0),
                     COALESCE(SUM(t.BRUTTO_TETELERTEK), 0)
-                FROM BEVETEL_TETEL t
+                FROM ATADAS_TETEL t
                 WHERE t.BIZONYLAT = @b
             ", _connection))
             {
@@ -649,7 +718,7 @@ public class BevetelService
             }
 
             using (var updCmd = new FbCommand(@"
-                UPDATE BEVETEL_FEJ
+                UPDATE ATADAS_FEJ
                 SET NETTO_ERTEK = @netto,
                     BRUTTO_ERTEK = @brutto
                 WHERE BIZONYLAT = @b
@@ -662,54 +731,6 @@ public class BevetelService
                 var rows = await updCmd.ExecuteNonQueryAsync();
                 return rows > 0;
             }
-        }
-        finally
-        {
-            await _connection.CloseAsync();
-        }
-    }
-
-    public async Task<bool> BizonylatExistsForOtherAsync(int id, string bizonylat)
-    {
-        bizonylat = (bizonylat ?? "").Trim();
-        if (bizonylat.Length == 0) return false;
-
-        await _connection.OpenAsync();
-        try
-        {
-            using var cmd = new FbCommand(@"
-                SELECT 1
-                FROM BEVETEL_FEJ
-                WHERE BIZONYLAT = @b
-                  AND ID <> @id
-                ROWS 1
-            ", _connection);
-
-            cmd.Parameters.AddWithValue("@b", bizonylat);
-            cmd.Parameters.AddWithValue("@id", id);
-
-            var obj = await cmd.ExecuteScalarAsync();
-            return obj != null;
-        }
-        finally
-        {
-            await _connection.CloseAsync();
-        }
-    }
-
-    public async Task<string> GetNextBizonylatAsync()
-    {
-        await _connection.OpenAsync();
-        try
-        {
-            using var cmd = new FbCommand(
-                "SELECT NEXT VALUE FOR BEVETEL_BIZONYLAT_SEQ FROM RDB$DATABASE",
-                _connection);
-
-            var obj = await cmd.ExecuteScalarAsync();
-            var n = Convert.ToInt64(obj, CultureInfo.InvariantCulture);
-
-            return $"BE-{n:0000000}";
         }
         finally
         {
@@ -759,7 +780,6 @@ public class BevetelService
 
     private async Task AddToStockAsync(string warehouseCode, string productCode, decimal qty, FbTransaction tx)
     {
-
         using (var upd = new FbCommand(@"
             UPDATE STOCK_ITEMS
             SET

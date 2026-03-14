@@ -3,7 +3,6 @@
 @inject Services.LogService LogService
 @inject IHttpContextAccessor Http
 
-
 <header class="home-header">
     <div class="header-left">
         <h3>Home</h3>
@@ -17,10 +16,10 @@
                 <button class="menu-btn" type="button">Törzsek ▾</button>
 
                 <div class="menu-panel @(ActiveMenu == "torzsek" ? "show" : "")">
-                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/products")'>Termékek</a>
-                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/partners")'>Partnerek</a>
-                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/productgroups")'>Termékcsoportok</a>
-                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/warehouses")'>Raktárak</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/products")'>Termékek</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/partners")'>Partnerek</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/productgroups")'>Termékcsoportok</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/warehouses")'>Raktárak</a>
                 </div>
 
             </div>
@@ -32,9 +31,9 @@
                 <button class="menu-btn" type="button">Készlet ▾</button>
 
                 <div class="menu-panel @(ActiveMenu == "keszlet" ? "show" : "")">
-                    <a class="menu-item" @onclick='() => Nav.NavigateTo("/bevetel")'>Bevételezés</a>
-                    <a class="menu-item">Átadás</a>
-                    <a class="menu-item">Kiadás</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/bevetel")'>Bevételezés</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/atadas")'>Átadás</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/kiadas")'>Kiadás</a>
                 </div>
             </div>
 
@@ -45,10 +44,10 @@
                 <button class="menu-btn" type="button">Kimutatások ▾</button>
 
                 <div class="menu-panel @(ActiveMenu == "kimutatasok" ? "show" : "")">
-                    <a class="menu-item">Raktárkészlet lista</a>
-                    <a class="menu-item">Árak (terméktörzs)</a>
-                    <a class="menu-item">Bevételek (összesen / tételesen)</a>
-                    <a class="menu-item">Automaták termékei</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/raktarkeszlet")'>Raktárkészlet lista</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/arak")'>Árak (terméktörzs)</a>
+                    <a class="menu-item" @onclick='() => NavigateAndClose("/forgalom")'>Forgalom</a>
+                    <a class="menu-item" @onclick="CloseAllMenus">Automaták termékei</a>
                 </div>
             </div>
 
@@ -69,10 +68,10 @@
             <div class="dropdown-menu @(_dropdownOpen ? "show" : "")">
                 @if (Session.CurrentUser!.RoleName == "Admin")
                 {
-                    <a class="dropdown-item" @onclick="OpenUserManagement">
+                    <a class="dropdown-item" @onclick="OpenUserManagementAndClose">
                         Felhasználók kezelése
                     </a>
-                    <a class="dropdown-item" @onclick="GoToLogs">Logok</a>
+                    <a class="dropdown-item" @onclick="GoToLogsAndClose">Logok</a>
                 }
                 <a class="dropdown-item" @onclick="Logout">Kijelentkezés</a>
             </div>
@@ -93,8 +92,22 @@
     private void ToggleDropdown() => _dropdownOpen = !_dropdownOpen;
     private void ShowDropdown(bool value) => _dropdownOpen = value;
 
+    private void CloseAllMenus()
+    {
+        ActiveMenu = null;
+        _dropdownOpen = false;
+    }
+
+    private void NavigateAndClose(string url)
+    {
+        CloseAllMenus();
+        Nav.NavigateTo(url);
+    }
+
     private async Task Logout()
     {
+        CloseAllMenus();
+
         if (Session.CurrentUser is not null)
         {
             var ip = Http.HttpContext?.Connection?.RemoteIpAddress?.ToString();
@@ -110,10 +123,18 @@
         Nav.NavigateTo("/logout", true);
     }
 
-    private void GoToLogs() => Nav.NavigateTo("/logs");
+    private void GoToLogsAndClose()
+    {
+        CloseAllMenus();
+        Nav.NavigateTo("/logs");
+    }
 
+    private void OpenUserManagementAndClose()
+    {
+        CloseAllMenus();
+        _showUserModal = true;
+    }
 
-    private void OpenUserManagement() => _showUserModal = true;
     private void CloseUserManagement() => _showUserModal = false;
 
     private void ShowMenu(string? menu) => ActiveMenu = menu;

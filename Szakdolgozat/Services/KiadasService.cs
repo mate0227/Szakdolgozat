@@ -4,16 +4,16 @@ using Szakdolgozat.Models;
 
 namespace Szakdolgozat.Services;
 
-public class BevetelService
+public class KiadasService
 {
     private readonly FbConnection _connection;
 
-    public BevetelService(FbConnection connection)
+    public KiadasService(FbConnection connection)
     {
         _connection = connection;
     }
 
-    public async Task<List<BevetelFej>> GetAllFejekAsync(string? search = null, int take = 500)
+    public async Task<List<KiadasFej>> GetAllFejekAsync(string? search = null, int take = 500)
     {
         search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
 
@@ -36,7 +36,7 @@ public class BevetelService
                     f.ARFOLYAM,
                     f.NETTO_ERTEK,
                     f.BRUTTO_ERTEK
-                FROM BEVETEL_FEJ f
+                FROM KIADAS_FEJ f
             ";
 
             if (search is not null)
@@ -62,12 +62,12 @@ public class BevetelService
             if (search is not null)
                 cmd.Parameters.AddWithValue("@s", search);
 
-            var result = new List<BevetelFej>();
+            var result = new List<KiadasFej>();
             using var r = await cmd.ExecuteReaderAsync();
 
             while (await r.ReadAsync())
             {
-                result.Add(new BevetelFej
+                result.Add(new KiadasFej
                 {
                     Id = r.GetInt32(0),
                     Bizonylat = r.GetString(1),
@@ -98,7 +98,7 @@ public class BevetelService
         }
     }
 
-    public async Task<BevetelFej?> GetFejByIdAsync(int id)
+    public async Task<KiadasFej?> GetFejByIdAsync(int id)
     {
         await _connection.OpenAsync();
         try
@@ -119,7 +119,7 @@ public class BevetelService
                     f.ARFOLYAM,
                     f.NETTO_ERTEK,
                     f.BRUTTO_ERTEK
-                FROM BEVETEL_FEJ f
+                FROM KIADAS_FEJ f
                 WHERE f.ID = @id
                 ROWS 1
             ", _connection);
@@ -129,7 +129,7 @@ public class BevetelService
             using var r = await cmd.ExecuteReaderAsync();
             if (!await r.ReadAsync()) return null;
 
-            return new BevetelFej
+            return new KiadasFej
             {
                 Id = r.GetInt32(0),
                 Bizonylat = r.GetString(1),
@@ -150,170 +150,6 @@ public class BevetelService
                 NettoErtek = r.IsDBNull(12) ? 0m : r.GetDecimal(12),
                 BruttoErtek = r.IsDBNull(13) ? 0m : r.GetDecimal(13),
             };
-        }
-        finally
-        {
-            await _connection.CloseAsync();
-        }
-    }
-
-    public async Task<BevetelFej?> GetFejByBizonylatAsync(string bizonylat)
-    {
-        bizonylat = (bizonylat ?? "").Trim();
-        if (bizonylat.Length == 0) return null;
-
-        await _connection.OpenAsync();
-        try
-        {
-            using var cmd = new FbCommand(@"
-                SELECT
-                    f.ID,
-                    f.BIZONYLAT,
-                    f.DATUM,
-                    f.LEZART,
-                    f.PARTNER_KOD,
-                    f.PARTNER_NEV,
-                    f.PARTNER_IRSZ,
-                    f.PARTNER_VAROS,
-                    f.PARTNER_CIM,
-                    f.MEGJEGYZES,
-                    f.VALUTA,
-                    f.ARFOLYAM,
-                    f.NETTO_ERTEK,
-                    f.BRUTTO_ERTEK
-                FROM BEVETEL_FEJ f
-                WHERE f.BIZONYLAT = @b
-                ROWS 1
-            ", _connection);
-
-            cmd.Parameters.AddWithValue("@b", bizonylat);
-
-            using var r = await cmd.ExecuteReaderAsync();
-            if (!await r.ReadAsync()) return null;
-
-            return new BevetelFej
-            {
-                Id = r.GetInt32(0),
-                Bizonylat = r.GetString(1),
-                Datum = r.GetDateTime(2),
-                Lezart = r.GetBoolean(3),
-
-                PartnerKod = r.GetString(4),
-                PartnerNev = r.GetString(5),
-                PartnerIrsz = r.GetString(6),
-                PartnerVaros = r.GetString(7),
-                PartnerCim = r.GetString(8),
-
-                Megjegyzes = r.IsDBNull(9) ? null : r.GetString(9),
-
-                Valuta = r.IsDBNull(10) ? "HUF" : r.GetString(10),
-                Arfolyam = r.IsDBNull(11) ? 1m : r.GetDecimal(11),
-
-                NettoErtek = r.IsDBNull(12) ? 0m : r.GetDecimal(12),
-                BruttoErtek = r.IsDBNull(13) ? 0m : r.GetDecimal(13),
-            };
-        }
-        finally
-        {
-            await _connection.CloseAsync();
-        }
-    }
-
-    public async Task<int> CreateFejAsync(BevetelFej f)
-    {
-        await _connection.OpenAsync();
-        try
-        {
-            using var cmd = new FbCommand(@"
-                INSERT INTO BEVETEL_FEJ
-                    (BIZONYLAT, DATUM, LEZART,
-                     PARTNER_KOD, PARTNER_NEV, PARTNER_IRSZ, PARTNER_VAROS, PARTNER_CIM,
-                     MEGJEGYZES,
-                     VALUTA, ARFOLYAM,
-                     NETTO_ERTEK, BRUTTO_ERTEK)
-                VALUES
-                    (@b, @datum, @lezart,
-                     @pk, @pn, @pi, @pv, @pc,
-                     @megj,
-                     @val, @arf,
-                     @net, @br)
-                RETURNING ID
-            ", _connection);
-
-            cmd.Parameters.AddWithValue("@b", (f.Bizonylat ?? "").Trim());
-            cmd.Parameters.AddWithValue("@datum", f.Datum);
-            cmd.Parameters.AddWithValue("@lezart", f.Lezart);
-
-            cmd.Parameters.AddWithValue("@pk", (f.PartnerKod ?? "").Trim());
-            cmd.Parameters.AddWithValue("@pn", (f.PartnerNev ?? "").Trim());
-            cmd.Parameters.AddWithValue("@pi", (f.PartnerIrsz ?? "").Trim());
-            cmd.Parameters.AddWithValue("@pv", (f.PartnerVaros ?? "").Trim());
-            cmd.Parameters.AddWithValue("@pc", (f.PartnerCim ?? "").Trim());
-
-            var megj = string.IsNullOrWhiteSpace(f.Megjegyzes) ? null : f.Megjegyzes.Trim();
-            cmd.Parameters.AddWithValue("@megj", (object?)megj ?? DBNull.Value);
-
-            cmd.Parameters.AddWithValue("@val", string.IsNullOrWhiteSpace(f.Valuta) ? "HUF" : f.Valuta.Trim());
-            cmd.Parameters.AddWithValue("@arf", f.Arfolyam <= 0 ? 1m : f.Arfolyam);
-
-            cmd.Parameters.AddWithValue("@net", f.NettoErtek);
-            cmd.Parameters.AddWithValue("@br", f.BruttoErtek);
-
-            var idObj = await cmd.ExecuteScalarAsync();
-            return Convert.ToInt32(idObj);
-        }
-        finally
-        {
-            await _connection.CloseAsync();
-        }
-    }
-
-    public async Task<bool> UpdateFejAsync(BevetelFej f)
-    {
-        await _connection.OpenAsync();
-        try
-        {
-            using var cmd = new FbCommand(@"
-                UPDATE BEVETEL_FEJ
-                SET
-                    BIZONYLAT = @b,
-                    DATUM = @datum,
-                    LEZART = @lezart,
-                    PARTNER_KOD = @pk,
-                    PARTNER_NEV = @pn,
-                    PARTNER_IRSZ = @pi,
-                    PARTNER_VAROS = @pv,
-                    PARTNER_CIM = @pc,
-                    MEGJEGYZES = @megj,
-                    VALUTA = @val,
-                    ARFOLYAM = @arf,
-                    NETTO_ERTEK = @net,
-                    BRUTTO_ERTEK = @br
-                WHERE ID = @id
-            ", _connection);
-
-            cmd.Parameters.AddWithValue("@id", f.Id);
-            cmd.Parameters.AddWithValue("@b", (f.Bizonylat ?? "").Trim());
-            cmd.Parameters.AddWithValue("@datum", f.Datum);
-            cmd.Parameters.AddWithValue("@lezart", f.Lezart);
-
-            cmd.Parameters.AddWithValue("@pk", (f.PartnerKod ?? "").Trim());
-            cmd.Parameters.AddWithValue("@pn", (f.PartnerNev ?? "").Trim());
-            cmd.Parameters.AddWithValue("@pi", (f.PartnerIrsz ?? "").Trim());
-            cmd.Parameters.AddWithValue("@pv", (f.PartnerVaros ?? "").Trim());
-            cmd.Parameters.AddWithValue("@pc", (f.PartnerCim ?? "").Trim());
-
-            var megj = string.IsNullOrWhiteSpace(f.Megjegyzes) ? null : f.Megjegyzes.Trim();
-            cmd.Parameters.AddWithValue("@megj", (object?)megj ?? DBNull.Value);
-
-            cmd.Parameters.AddWithValue("@val", string.IsNullOrWhiteSpace(f.Valuta) ? "HUF" : f.Valuta.Trim());
-            cmd.Parameters.AddWithValue("@arf", f.Arfolyam <= 0 ? 1m : f.Arfolyam);
-
-            cmd.Parameters.AddWithValue("@net", f.NettoErtek);
-            cmd.Parameters.AddWithValue("@br", f.BruttoErtek);
-
-            var rows = await cmd.ExecuteNonQueryAsync();
-            return rows > 0;
         }
         finally
         {
@@ -331,7 +167,7 @@ public class BevetelService
         {
             using var cmd = new FbCommand(@"
                 SELECT 1
-                FROM BEVETEL_FEJ
+                FROM KIADAS_FEJ
                 WHERE BIZONYLAT = @b
                 ROWS 1
             ", _connection);
@@ -347,10 +183,176 @@ public class BevetelService
         }
     }
 
-    public async Task<List<BevetelTetel>> GetTetelekAsync(string bizonylat)
+    public async Task<int> CreateFejAsync(KiadasFej f)
+    {
+        await _connection.OpenAsync();
+        try
+        {
+            var biz = (f.Bizonylat ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(biz))
+                biz = await GetNextBizonylatAsync_INTERNAL_UsesOpenConnection();
+
+            using var cmd = new FbCommand(@"
+                INSERT INTO KIADAS_FEJ
+                    (BIZONYLAT, DATUM, LEZART,
+                     PARTNER_KOD, PARTNER_NEV, PARTNER_IRSZ, PARTNER_VAROS, PARTNER_CIM,
+                     MEGJEGYZES,
+                     VALUTA, ARFOLYAM,
+                     NETTO_ERTEK, BRUTTO_ERTEK)
+                VALUES
+                    (@b, @datum, @lezart,
+                     @pk, @pn, @pi, @pv, @pc,
+                     @megj,
+                     @val, @arf,
+                     @net, @br)
+                RETURNING ID
+            ", _connection);
+
+            cmd.Parameters.AddWithValue("@b", biz);
+            cmd.Parameters.AddWithValue("@datum", f.Datum);
+            cmd.Parameters.AddWithValue("@lezart", f.Lezart);
+
+            cmd.Parameters.AddWithValue("@pk", (f.PartnerKod ?? "").Trim());
+            cmd.Parameters.AddWithValue("@pn", (f.PartnerNev ?? "").Trim());
+            cmd.Parameters.AddWithValue("@pi", (f.PartnerIrsz ?? "").Trim());
+            cmd.Parameters.AddWithValue("@pv", (f.PartnerVaros ?? "").Trim());
+            cmd.Parameters.AddWithValue("@pc", (f.PartnerCim ?? "").Trim());
+
+            var megj = string.IsNullOrWhiteSpace(f.Megjegyzes) ? null : f.Megjegyzes.Trim();
+            cmd.Parameters.AddWithValue("@megj", (object?)megj ?? DBNull.Value);
+
+            cmd.Parameters.AddWithValue("@val", string.IsNullOrWhiteSpace(f.Valuta) ? "HUF" : f.Valuta.Trim());
+            cmd.Parameters.AddWithValue("@arf", f.Arfolyam <= 0 ? 1m : f.Arfolyam);
+
+            cmd.Parameters.AddWithValue("@net", 0m);
+            cmd.Parameters.AddWithValue("@br", 0m);
+
+            var idObj = await cmd.ExecuteScalarAsync();
+            return Convert.ToInt32(idObj);
+        }
+        finally
+        {
+            await _connection.CloseAsync();
+        }
+    }
+
+    public async Task<bool> UpdateFejAsync(KiadasFej f)
+    {
+        await _connection.OpenAsync();
+        try
+        {
+            using var cmd = new FbCommand(@"
+                UPDATE KIADAS_FEJ
+                SET
+                    DATUM = @datum,
+                    LEZART = @lezart,
+                    PARTNER_KOD = @pk,
+                    PARTNER_NEV = @pn,
+                    PARTNER_IRSZ = @pi,
+                    PARTNER_VAROS = @pv,
+                    PARTNER_CIM = @pc,
+                    MEGJEGYZES = @megj,
+                    VALUTA = @val,
+                    ARFOLYAM = @arf
+                WHERE ID = @id
+            ", _connection);
+
+            cmd.Parameters.AddWithValue("@id", f.Id);
+            cmd.Parameters.AddWithValue("@datum", f.Datum);
+            cmd.Parameters.AddWithValue("@lezart", f.Lezart);
+
+            cmd.Parameters.AddWithValue("@pk", (f.PartnerKod ?? "").Trim());
+            cmd.Parameters.AddWithValue("@pn", (f.PartnerNev ?? "").Trim());
+            cmd.Parameters.AddWithValue("@pi", (f.PartnerIrsz ?? "").Trim());
+            cmd.Parameters.AddWithValue("@pv", (f.PartnerVaros ?? "").Trim());
+            cmd.Parameters.AddWithValue("@pc", (f.PartnerCim ?? "").Trim());
+
+            var megj = string.IsNullOrWhiteSpace(f.Megjegyzes) ? null : f.Megjegyzes.Trim();
+            cmd.Parameters.AddWithValue("@megj", (object?)megj ?? DBNull.Value);
+
+            cmd.Parameters.AddWithValue("@val", string.IsNullOrWhiteSpace(f.Valuta) ? "HUF" : f.Valuta.Trim());
+            cmd.Parameters.AddWithValue("@arf", f.Arfolyam <= 0 ? 1m : f.Arfolyam);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
+        }
+        finally
+        {
+            await _connection.CloseAsync();
+        }
+    }
+
+    public async Task<bool> DeleteFejAsync(int id)
+    {
+        await _connection.OpenAsync();
+        try
+        {
+            using var cmd = new FbCommand(@"DELETE FROM KIADAS_FEJ WHERE ID = @id", _connection);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            var rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0;
+        }
+        finally
+        {
+            await _connection.CloseAsync();
+        }
+    }
+
+    public async Task<bool> RecalcFejTotalsAsync(string bizonylat)
     {
         bizonylat = (bizonylat ?? "").Trim();
-        if (bizonylat.Length == 0) return new List<BevetelTetel>();
+        if (bizonylat.Length == 0) return false;
+
+        await _connection.OpenAsync();
+        try
+        {
+            decimal netto = 0m;
+            decimal brutto = 0m;
+
+            using (var sumCmd = new FbCommand(@"
+                SELECT
+                    COALESCE(SUM(t.NETTO_TETELERTEK), 0),
+                    COALESCE(SUM(t.BRUTTO_TETELERTEK), 0)
+                FROM KIADAS_TETEL t
+                WHERE t.BIZONYLAT = @b
+            ", _connection))
+            {
+                sumCmd.Parameters.AddWithValue("@b", bizonylat);
+
+                using var r = await sumCmd.ExecuteReaderAsync();
+                if (await r.ReadAsync())
+                {
+                    netto = r.IsDBNull(0) ? 0m : r.GetDecimal(0);
+                    brutto = r.IsDBNull(1) ? 0m : r.GetDecimal(1);
+                }
+            }
+
+            using (var updCmd = new FbCommand(@"
+                UPDATE KIADAS_FEJ
+                SET NETTO_ERTEK = @netto,
+                    BRUTTO_ERTEK = @brutto
+                WHERE BIZONYLAT = @b
+            ", _connection))
+            {
+                updCmd.Parameters.AddWithValue("@netto", netto);
+                updCmd.Parameters.AddWithValue("@brutto", brutto);
+                updCmd.Parameters.AddWithValue("@b", bizonylat);
+
+                var rows = await updCmd.ExecuteNonQueryAsync();
+                return rows > 0;
+            }
+        }
+        finally
+        {
+            await _connection.CloseAsync();
+        }
+    }
+
+    public async Task<List<KiadasTetel>> GetTetelekAsync(string bizonylat)
+    {
+        bizonylat = (bizonylat ?? "").Trim();
+        if (bizonylat.Length == 0) return new List<KiadasTetel>();
 
         await _connection.OpenAsync();
         try
@@ -369,19 +371,19 @@ public class BevetelService
                     t.BRUTTO_EGYSEGAR,
                     t.NETTO_TETELERTEK,
                     t.BRUTTO_TETELERTEK
-                FROM BEVETEL_TETEL t
+                FROM KIADAS_TETEL t
                 WHERE t.BIZONYLAT = @b
                 ORDER BY t.ID
             ", _connection);
 
             cmd.Parameters.AddWithValue("@b", bizonylat);
 
-            var result = new List<BevetelTetel>();
+            var result = new List<KiadasTetel>();
             using var r = await cmd.ExecuteReaderAsync();
 
             while (await r.ReadAsync())
             {
-                result.Add(new BevetelTetel
+                result.Add(new KiadasTetel
                 {
                     Id = r.GetInt32(0),
                     Bizonylat = r.GetString(1),
@@ -406,20 +408,13 @@ public class BevetelService
         }
     }
 
-    public async Task<int> CreateTetelAsync(BevetelTetel t)
+    public async Task<int> CreateTetelAsync(KiadasTetel t)
     {
         await _connection.OpenAsync();
-        FbTransaction? tx = null;
-
         try
         {
-            tx = await _connection.BeginTransactionAsync();
-
-            var warehouseCode = await GetWarehouseCodeByIdAsync(t.WarehouseId, tx);
-            var productCode = await GetProductCodeByIdAsync(t.TermekId, tx);
-
             using var cmd = new FbCommand(@"
-                INSERT INTO BEVETEL_TETEL
+                INSERT INTO KIADAS_TETEL
                     (BIZONYLAT, TERMEK_ID, WAREHOUSE_ID, NEV, ME, AFAKOD,
                      MENNYISEG,
                      NETTO_EGYSEGAR, BRUTTO_EGYSEGAR,
@@ -430,7 +425,7 @@ public class BevetelService
                      @ne, @be,
                      @nte, @bte)
                 RETURNING ID
-            ", _connection, tx);
+            ", _connection);
 
             cmd.Parameters.AddWithValue("@b", (t.Bizonylat ?? "").Trim());
             cmd.Parameters.AddWithValue("@tid", t.TermekId);
@@ -447,15 +442,9 @@ public class BevetelService
             var idObj = await cmd.ExecuteScalarAsync();
             var newId = Convert.ToInt32(idObj);
 
-            await AddToStockAsync(warehouseCode, productCode, t.Mennyiseg, tx);
+            await AdjustStockByIdsAsync(t.WarehouseId, t.TermekId, deltaQty: -t.Mennyiseg);
 
-            await tx.CommitAsync();
             return newId;
-        }
-        catch
-        {
-            if (tx is not null) await tx.RollbackAsync();
-            throw;
         }
         finally
         {
@@ -463,39 +452,34 @@ public class BevetelService
         }
     }
 
-    public async Task<bool> UpdateTetelAsync(BevetelTetel t)
+    public async Task<bool> UpdateTetelAsync(KiadasTetel t)
     {
         await _connection.OpenAsync();
-        FbTransaction? tx = null;
-
         try
         {
-            tx = await _connection.BeginTransactionAsync();
-
-            int oldWarehouseId;
             int oldTermekId;
+            int oldWarehouseId;
             decimal oldQty;
 
             using (var q = new FbCommand(@"
-                SELECT WAREHOUSE_ID, TERMEK_ID, MENNYISEG
-                FROM BEVETEL_TETEL
+                SELECT TERMEK_ID, WAREHOUSE_ID, MENNYISEG
+                FROM KIADAS_TETEL
                 WHERE ID = @id
                 ROWS 1
-            ", _connection, tx))
+            ", _connection))
             {
                 q.Parameters.AddWithValue("@id", t.Id);
                 using var r = await q.ExecuteReaderAsync();
                 if (!await r.ReadAsync()) return false;
 
-                oldWarehouseId = r.GetInt32(0);
-                oldTermekId = r.GetInt32(1);
+                oldTermekId = r.GetInt32(0);
+                oldWarehouseId = r.GetInt32(1);
                 oldQty = r.GetDecimal(2);
             }
 
-            using (var cmd = new FbCommand(@"
-                UPDATE BEVETEL_TETEL
+            using var cmd = new FbCommand(@"
+                UPDATE KIADAS_TETEL
                 SET
-                    BIZONYLAT = @b,
                     TERMEK_ID = @tid,
                     WAREHOUSE_ID = @wid,
                     NEV = @nev,
@@ -507,53 +491,27 @@ public class BevetelService
                     NETTO_TETELERTEK = @nte,
                     BRUTTO_TETELERTEK = @bte
                 WHERE ID = @id
-            ", _connection, tx))
-            {
-                cmd.Parameters.AddWithValue("@id", t.Id);
-                cmd.Parameters.AddWithValue("@b", (t.Bizonylat ?? "").Trim());
-                cmd.Parameters.AddWithValue("@tid", t.TermekId);
-                cmd.Parameters.AddWithValue("@wid", t.WarehouseId);
-                cmd.Parameters.AddWithValue("@nev", (t.Nev ?? "").Trim());
-                cmd.Parameters.AddWithValue("@me", (t.Me ?? "").Trim());
-                cmd.Parameters.AddWithValue("@afa", (t.AfaKod ?? "").Trim());
-                cmd.Parameters.AddWithValue("@menny", t.Mennyiseg);
-                cmd.Parameters.AddWithValue("@ne", t.NettoEgysegAr);
-                cmd.Parameters.AddWithValue("@be", t.BruttoEgysegAr);
-                cmd.Parameters.AddWithValue("@nte", t.NettoTetelErtek);
-                cmd.Parameters.AddWithValue("@bte", t.BruttoTetelErtek);
+            ", _connection);
 
-                var rows = await cmd.ExecuteNonQueryAsync();
-                if (rows == 0) return false;
-            }
+            cmd.Parameters.AddWithValue("@id", t.Id);
+            cmd.Parameters.AddWithValue("@tid", t.TermekId);
+            cmd.Parameters.AddWithValue("@wid", t.WarehouseId);
+            cmd.Parameters.AddWithValue("@nev", (t.Nev ?? "").Trim());
+            cmd.Parameters.AddWithValue("@me", (t.Me ?? "").Trim());
+            cmd.Parameters.AddWithValue("@afa", (t.AfaKod ?? "").Trim());
+            cmd.Parameters.AddWithValue("@menny", t.Mennyiseg);
+            cmd.Parameters.AddWithValue("@ne", t.NettoEgysegAr);
+            cmd.Parameters.AddWithValue("@be", t.BruttoEgysegAr);
+            cmd.Parameters.AddWithValue("@nte", t.NettoTetelErtek);
+            cmd.Parameters.AddWithValue("@bte", t.BruttoTetelErtek);
 
-            var oldWhCode = await GetWarehouseCodeByIdAsync(oldWarehouseId, tx);
-            var oldProdCode = await GetProductCodeByIdAsync(oldTermekId, tx);
+            var rows = await cmd.ExecuteNonQueryAsync();
+            if (rows == 0) return false;
 
-            var newWhCode = await GetWarehouseCodeByIdAsync(t.WarehouseId, tx);
-            var newProdCode = await GetProductCodeByIdAsync(t.TermekId, tx);
+            await AdjustStockByIdsAsync(oldWarehouseId, oldTermekId, deltaQty: +oldQty);
+            await AdjustStockByIdsAsync(t.WarehouseId, t.TermekId, deltaQty: -t.Mennyiseg);
 
-            if (oldWhCode == newWhCode && oldProdCode == newProdCode)
-            {
-                var diff = t.Mennyiseg - oldQty;
-                if (diff != 0m)
-                    await AddToStockAsync(newWhCode, newProdCode, diff, tx);
-            }
-            else
-            {
-                if (oldQty != 0m)
-                    await AddToStockAsync(oldWhCode, oldProdCode, -oldQty, tx);
-
-                if (t.Mennyiseg != 0m)
-                    await AddToStockAsync(newWhCode, newProdCode, t.Mennyiseg, tx);
-            }
-
-            await tx.CommitAsync();
             return true;
-        }
-        catch
-        {
-            if (tx is not null) await tx.RollbackAsync();
-            throw;
         }
         finally
         {
@@ -564,132 +522,38 @@ public class BevetelService
     public async Task<bool> DeleteTetelAsync(int id)
     {
         await _connection.OpenAsync();
-        FbTransaction? tx = null;
-
         try
         {
-            tx = await _connection.BeginTransactionAsync();
-
-            int warehouseId;
             int termekId;
+            int warehouseId;
             decimal qty;
 
             using (var q = new FbCommand(@"
-                SELECT WAREHOUSE_ID, TERMEK_ID, MENNYISEG
-                FROM BEVETEL_TETEL
+                SELECT TERMEK_ID, WAREHOUSE_ID, MENNYISEG
+                FROM KIADAS_TETEL
                 WHERE ID = @id
                 ROWS 1
-            ", _connection, tx))
+            ", _connection))
             {
                 q.Parameters.AddWithValue("@id", id);
-
                 using var r = await q.ExecuteReaderAsync();
                 if (!await r.ReadAsync()) return false;
 
-                warehouseId = r.GetInt32(0);
-                termekId = r.GetInt32(1);
+                termekId = r.GetInt32(0);
+                warehouseId = r.GetInt32(1);
                 qty = r.GetDecimal(2);
             }
 
-            using (var cmd = new FbCommand(@"DELETE FROM BEVETEL_TETEL WHERE ID = @id", _connection, tx))
+            using (var cmd = new FbCommand(@"DELETE FROM KIADAS_TETEL WHERE ID = @id", _connection))
             {
                 cmd.Parameters.AddWithValue("@id", id);
                 var rows = await cmd.ExecuteNonQueryAsync();
                 if (rows == 0) return false;
             }
 
-            var whCode = await GetWarehouseCodeByIdAsync(warehouseId, tx);
-            var prodCode = await GetProductCodeByIdAsync(termekId, tx);
+            await AdjustStockByIdsAsync(warehouseId, termekId, deltaQty: +qty);
 
-            // STOCK DECREASE
-            if (qty != 0m)
-                await AddToStockAsync(whCode, prodCode, -qty, tx);
-
-            await tx.CommitAsync();
             return true;
-        }
-        catch
-        {
-            if (tx is not null) await tx.RollbackAsync();
-            throw;
-        }
-        finally
-        {
-            await _connection.CloseAsync();
-        }
-    }
-
-    public async Task<bool> RecalcFejTotalsAsync(string bizonylat)
-    {
-        bizonylat = (bizonylat ?? "").Trim();
-        if (bizonylat.Length == 0) return false;
-
-        await _connection.OpenAsync();
-        try
-        {
-            decimal netto = 0m;
-            decimal brutto = 0m;
-
-            using (var sumCmd = new FbCommand(@"
-                SELECT
-                    COALESCE(SUM(t.NETTO_TETELERTEK), 0),
-                    COALESCE(SUM(t.BRUTTO_TETELERTEK), 0)
-                FROM BEVETEL_TETEL t
-                WHERE t.BIZONYLAT = @b
-            ", _connection))
-            {
-                sumCmd.Parameters.AddWithValue("@b", bizonylat);
-
-                using var r = await sumCmd.ExecuteReaderAsync();
-                if (await r.ReadAsync())
-                {
-                    netto = r.IsDBNull(0) ? 0m : r.GetDecimal(0);
-                    brutto = r.IsDBNull(1) ? 0m : r.GetDecimal(1);
-                }
-            }
-
-            using (var updCmd = new FbCommand(@"
-                UPDATE BEVETEL_FEJ
-                SET NETTO_ERTEK = @netto,
-                    BRUTTO_ERTEK = @brutto
-                WHERE BIZONYLAT = @b
-            ", _connection))
-            {
-                updCmd.Parameters.AddWithValue("@netto", netto);
-                updCmd.Parameters.AddWithValue("@brutto", brutto);
-                updCmd.Parameters.AddWithValue("@b", bizonylat);
-
-                var rows = await updCmd.ExecuteNonQueryAsync();
-                return rows > 0;
-            }
-        }
-        finally
-        {
-            await _connection.CloseAsync();
-        }
-    }
-
-    public async Task<bool> BizonylatExistsForOtherAsync(int id, string bizonylat)
-    {
-        bizonylat = (bizonylat ?? "").Trim();
-        if (bizonylat.Length == 0) return false;
-
-        await _connection.OpenAsync();
-        try
-        {
-            using var cmd = new FbCommand(@"
-                SELECT 1
-                FROM BEVETEL_FEJ
-                WHERE BIZONYLAT = @b
-                  AND ID <> @id
-                ROWS 1
-            ", _connection);
-
-            cmd.Parameters.AddWithValue("@b", bizonylat);
-            cmd.Parameters.AddWithValue("@id", id);
-
-            var obj = await cmd.ExecuteScalarAsync();
-            return obj != null;
         }
         finally
         {
@@ -703,13 +567,13 @@ public class BevetelService
         try
         {
             using var cmd = new FbCommand(
-                "SELECT NEXT VALUE FOR BEVETEL_BIZONYLAT_SEQ FROM RDB$DATABASE",
+                "SELECT NEXT VALUE FOR KIADAS_BIZONYLAT_SEQ FROM RDB$DATABASE",
                 _connection);
 
             var obj = await cmd.ExecuteScalarAsync();
             var n = Convert.ToInt64(obj, CultureInfo.InvariantCulture);
 
-            return $"BE-{n:0000000}";
+            return $"KI-{n:0000000}";
         }
         finally
         {
@@ -717,49 +581,61 @@ public class BevetelService
         }
     }
 
-    private async Task<string> GetWarehouseCodeByIdAsync(int warehouseId, FbTransaction tx)
+    private async Task<string> GetNextBizonylatAsync_INTERNAL_UsesOpenConnection()
+    {
+        using var cmd = new FbCommand(
+            "SELECT NEXT VALUE FOR KIADAS_BIZONYLAT_SEQ FROM RDB$DATABASE",
+            _connection);
+
+        var obj = await cmd.ExecuteScalarAsync();
+        var n = Convert.ToInt64(obj, CultureInfo.InvariantCulture);
+
+        return $"KI-{n:0000000}";
+    }
+
+    private async Task AdjustStockByIdsAsync(int warehouseId, int productId, decimal deltaQty)
+    {
+        if (deltaQty == 0) return;
+
+        var whCode = await GetWarehouseCodeByIdAsync(warehouseId);
+        var prodCode = await GetProductCodeByIdAsync(productId);
+
+        if (string.IsNullOrWhiteSpace(whCode) || string.IsNullOrWhiteSpace(prodCode))
+            throw new Exception("Stock update failed: missing warehouse code or product code.");
+
+        await AddToStockAsync(whCode, prodCode, deltaQty);
+    }
+
+    private async Task<string> GetWarehouseCodeByIdAsync(int warehouseId)
     {
         using var cmd = new FbCommand(@"
-            SELECT w.CODE
-            FROM WAREHOUSES w
-            WHERE w.ID = @id
+            SELECT CODE
+            FROM WAREHOUSES
+            WHERE ID = @id
             ROWS 1
-        ", _connection, tx);
+        ", _connection);
 
         cmd.Parameters.AddWithValue("@id", warehouseId);
-
         var obj = await cmd.ExecuteScalarAsync();
-        var code = obj?.ToString()?.Trim();
-
-        if (string.IsNullOrWhiteSpace(code))
-            throw new InvalidOperationException($"Warehouse code not found for ID={warehouseId}");
-
-        return code!;
+        return obj?.ToString()?.Trim() ?? "";
     }
 
-    private async Task<string> GetProductCodeByIdAsync(int productId, FbTransaction tx)
+    private async Task<string> GetProductCodeByIdAsync(int productId)
     {
         using var cmd = new FbCommand(@"
-            SELECT p.CODE
-            FROM PRODUCTS p
-            WHERE p.ID = @id
+            SELECT CODE
+            FROM PRODUCTS
+            WHERE ID = @id
             ROWS 1
-        ", _connection, tx);
+        ", _connection);
 
         cmd.Parameters.AddWithValue("@id", productId);
-
         var obj = await cmd.ExecuteScalarAsync();
-        var code = obj?.ToString()?.Trim();
-
-        if (string.IsNullOrWhiteSpace(code))
-            throw new InvalidOperationException($"Product code not found for ID={productId}");
-
-        return code!;
+        return obj?.ToString()?.Trim() ?? "";
     }
 
-    private async Task AddToStockAsync(string warehouseCode, string productCode, decimal qty, FbTransaction tx)
+    private async Task AddToStockAsync(string warehouseCode, string productCode, decimal qtyDelta)
     {
-
         using (var upd = new FbCommand(@"
             UPDATE STOCK_ITEMS
             SET
@@ -767,9 +643,9 @@ public class BevetelService
                 UPDATED_AT = CURRENT_TIMESTAMP
             WHERE WAREHOUSE_CODE = @wh
               AND PRODUCT_CODE = @pc
-        ", _connection, tx))
+        ", _connection))
         {
-            upd.Parameters.AddWithValue("@qty", qty);
+            upd.Parameters.AddWithValue("@qty", qtyDelta);
             upd.Parameters.AddWithValue("@wh", warehouseCode);
             upd.Parameters.AddWithValue("@pc", productCode);
 
@@ -782,11 +658,11 @@ public class BevetelService
                 (WAREHOUSE_CODE, PRODUCT_CODE, QTY, UPDATED_AT)
             VALUES
                 (@wh, @pc, @qty, CURRENT_TIMESTAMP)
-        ", _connection, tx))
+        ", _connection))
         {
             ins.Parameters.AddWithValue("@wh", warehouseCode);
             ins.Parameters.AddWithValue("@pc", productCode);
-            ins.Parameters.AddWithValue("@qty", qty);
+            ins.Parameters.AddWithValue("@qty", qtyDelta);
 
             await ins.ExecuteNonQueryAsync();
         }

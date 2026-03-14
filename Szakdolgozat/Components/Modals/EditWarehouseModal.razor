@@ -4,32 +4,34 @@
     <div class="modal-window">
         <h3>Raktár módosítása</h3>
 
-        <div class="form-row">
-            <label>ID</label>
-            <input value="@Warehouse.Id" disabled />
-        </div>
+        <div class="grid-3">
+            <div class="form-row">
+                <label>ID</label>
+                <input value="@Warehouse.Id" disabled />
+            </div>
 
-        <div class="form-row">
-            <label>Kód</label>
-            <input @bind="Warehouse.Code" class="@GetCodeInputClass()" />
+            <div class="form-row">
+                <label>Kód</label>
+                <input @bind="Warehouse.Code" class="@GetCodeInputClass()" />
 
-            @if (ShowErrors && string.IsNullOrWhiteSpace(Warehouse.Code))
-            {
-                <p class="field-error">A kód kitöltése kötelező!</p>
-            }
-            @if (!string.IsNullOrWhiteSpace(CodeError))
-            {
-                <p class="field-error">@CodeError</p>
-            }
-        </div>
+                @if (ShowErrors && string.IsNullOrWhiteSpace(Warehouse.Code))
+                {
+                    <p class="field-error">A kód kitöltése kötelező!</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(CodeError))
+                {
+                    <p class="field-error">@CodeError</p>
+                }
+            </div>
 
-        <div class="form-row">
-            <label>Név</label>
-            <input @bind="Warehouse.Name" class="@GetInputClass(Warehouse.Name)" />
-            @if (ShowErrors && string.IsNullOrWhiteSpace(Warehouse.Name))
-            {
-                <p class="field-error">A név kitöltése kötelező!</p>
-            }
+            <div class="form-row">
+                <label>Név</label>
+                <input @bind="Warehouse.Name" class="@GetInputClass(Warehouse.Name)" />
+                @if (ShowErrors && string.IsNullOrWhiteSpace(Warehouse.Name))
+                {
+                    <p class="field-error">A név kitöltése kötelező!</p>
+                }
+            </div>
         </div>
 
         <div class="form-row checkbox-row">
@@ -39,40 +41,44 @@
             </label>
         </div>
 
-        <div class="form-row">
-            <label>Megye</label>
-            <input @bind="Warehouse.County" class="@GetLocationInputClass(Warehouse.County)" />
-            @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.County))
-            {
-                <p class="field-error">Automatánál a megye kötelező!</p>
-            }
-        </div>
+        <hr class="sep" />
 
-        <div class="form-row">
-            <label>Város</label>
-            <input @bind="Warehouse.City" class="@GetLocationInputClass(Warehouse.City)" />
-            @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.City))
-            {
-                <p class="field-error">Automatánál a város kötelező!</p>
-            }
-        </div>
+        <div class="grid-4">
+            <div class="form-row">
+                <label>Irányítószám</label>
+                <input @bind="Warehouse.PostalCode" class="@GetLocationInputClass(Warehouse.PostalCode)" />
+                @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.PostalCode))
+                {
+                    <p class="field-error">Automatánál az irányítószám kötelező!</p>
+                }
+            </div>
 
-        <div class="form-row">
-            <label>Irányítószám</label>
-            <input @bind="Warehouse.PostalCode" class="@GetLocationInputClass(Warehouse.PostalCode)" />
-            @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.PostalCode))
-            {
-                <p class="field-error">Automatánál az irányítószám kötelező!</p>
-            }
-        </div>
+            <div class="form-row">
+                <label>Megye</label>
+                <input @bind="Warehouse.County" class="@GetLocationInputClass(Warehouse.County)" />
+                @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.County))
+                {
+                    <p class="field-error">Automatánál a megye kötelező!</p>
+                }
+            </div>
 
-        <div class="form-row">
-            <label>Cím</label>
-            <input @bind="Warehouse.Address" class="@GetLocationInputClass(Warehouse.Address)" />
-            @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.Address))
-            {
-                <p class="field-error">Automatánál a cím kötelező!</p>
-            }
+            <div class="form-row">
+                <label>Város</label>
+                <input @bind="Warehouse.City" class="@GetLocationInputClass(Warehouse.City)" />
+                @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.City))
+                {
+                    <p class="field-error">Automatánál a város kötelező!</p>
+                }
+            </div>
+
+            <div class="form-row">
+                <label>Cím</label>
+                <input @bind="Warehouse.Address" class="@GetLocationInputClass(Warehouse.Address)" />
+                @if (ShowErrors && Warehouse.IsAutomaton && string.IsNullOrWhiteSpace(Warehouse.Address))
+                {
+                    <p class="field-error">Automatánál a cím kötelező!</p>
+                }
+            </div>
         </div>
 
         <div class="button-row">

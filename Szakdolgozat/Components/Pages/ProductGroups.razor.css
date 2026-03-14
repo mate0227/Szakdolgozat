@@ -27,6 +27,16 @@
         color: #243a63;
     }
 
+        .pg-btn.secondary.danger {
+            background: rgba(255,0,0,0.10);
+            color: #a00000;
+        }
+
+    .pg-btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+
 .pg-table-wrap {
     overflow: auto;
     border-radius: 12px;
@@ -51,21 +61,21 @@
         white-space: nowrap;
     }
 
-.table-btn {
-    padding: 7px 10px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-weight: 600;
-    margin-right: 8px;
-}
-
-    .table-btn.edit {
-        background: rgba(59,107,255,0.15);
-        color: #243a63;
+    .pg-table th {
+        background: rgba(255,255,255,0.9);
+        position: sticky;
+        top: 0;
+        z-index: 2;
     }
 
-    .table-btn.delete {
-        background: rgba(255,0,0,0.10);
-        color: #a00000;
+    .pg-table tbody tr.row-selected td {
+        background: rgba(59,107,255,0.22) !important;
+    }
+
+    .pg-table tbody tr.row-selected:hover td {
+        background: rgba(59,107,255,0.22) !important;
+    }
+
+    .pg-table tbody tr:not(.row-selected):hover td {
+        background: rgba(0,0,0,0.03);
     }

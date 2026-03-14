@@ -1,4 +1,8 @@
-﻿.p-toolbar {
+﻿/* =========================
+   TOOLBAR
+   ========================= */
+
+.p-toolbar {
     display: flex;
     gap: 10px;
     align-items: center;
@@ -27,11 +31,6 @@
         color: #243a63;
     }
 
-        .p-btn.secondary.danger {
-            background: rgba(255,0,0,0.10);
-            color: #a00000;
-        }
-
     .p-btn:disabled {
         opacity: 0.6;
         cursor: default;
@@ -41,6 +40,10 @@
     color: #b00020;
 }
 
+/* =========================
+   TABLE
+   ========================= */
+
 .p-table-wrap {
     overflow: auto;
     border-radius: 12px;
@@ -49,7 +52,7 @@
 
 .p-table {
     width: 100%;
-    min-width: 1400px;
+    min-width: 1900px;
     border-collapse: collapse;
     table-layout: fixed;
 }
@@ -77,14 +80,13 @@
         z-index: 2;
     }
 
-    .p-table tbody tr.row-selected td {
-        background: rgba(59,107,255,0.22) !important;
-    }
+.row-selected td {
+    background: rgba(59,107,255,0.10);
+}
 
-    .p-table tbody tr.row-selected:hover td {
-        background: rgba(59,107,255,0.22) !important;
-    }
-
-    .p-table tbody tr:not(.row-selected):hover td {
-        background: rgba(0,0,0,0.03);
-    }
+.p-table tbody tr:hover td {
+    background: rgba(0,0,0,0.03);
+}
+.p-table.atadas-table {
+    min-width: 1700px;
+}

@@ -5,21 +5,15 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// =======================
-// SERVICES
-// =======================
-
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Firebird Connection
 builder.Services.AddScoped<FbConnection>(sp =>
 {
     var cs = builder.Configuration.GetConnectionString("Firebird");
     return new FbConnection(cs);
 });
 
-// Auth system
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -43,18 +37,14 @@ builder.Services.AddScoped<PartnerService>();
 builder.Services.AddScoped<VatService>();
 builder.Services.AddScoped<ProductPriceService>();
 builder.Services.AddScoped<BevetelService>();
-
-
-
-
-
-
+builder.Services.AddScoped<StockService>();
+builder.Services.AddScoped<KiadasService>();
+builder.Services.AddScoped<PriceReportService>();
+builder.Services.AddScoped<AtadasService>();
+builder.Services.AddScoped<ForgalomService>();
 
 var app = builder.Build();
 
-// =======================
-// MIDDLEWARE
-// =======================
 
 if (!app.Environment.IsDevelopment())
 {

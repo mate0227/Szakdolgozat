@@ -6,8 +6,6 @@
 @inject Services.LogService LogService
 @inject IHttpContextAccessor Http
 
-
-
 <h2>Termékcsoportok</h2>
 
 @if (!Session.IsLoggedIn)
@@ -23,6 +21,21 @@ else
                @oninput="OnSearchInput" />
 
         <button class="pg-btn" @onclick="OpenAdd" type="button">Új csoport</button>
+
+        <button class="pg-btn secondary"
+                type="button"
+                @onclick="OpenEdit"
+                disabled="@(_selected is null || _loading)">
+            Módosítás
+        </button>
+
+        <button class="pg-btn secondary danger"
+                type="button"
+                @onclick="OpenDelete"
+                disabled="@(_selected is null || _loading)">
+            Törlés
+        </button>
+
         <button class="pg-btn secondary" @onclick="Reload" type="button" disabled="@_loading">Frissítés</button>
     </div>
 
@@ -42,19 +55,18 @@ else
                     <tr>
                         <th style="width:120px;">ID</th>
                         <th>Név</th>
-                        <th style="width:220px;">Kezelés</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var g in _groups)
                     {
-                        <tr>
+                        var selected = _selected?.Id == g.Id;
+
+                        <tr class="@(selected ? "row-selected" : "")"
+                            style="cursor:pointer;"
+                            @onclick="() => SelectRow(g)">
                             <td>@g.Id</td>
                             <td title="@g.Name">@g.Name</td>
-                            <td>
-                                <button class="table-btn edit" @onclick="() => OpenEdit(g)" type="button">Módosítás</button>
-                                <button class="table-btn delete" @onclick="() => OpenDelete(g)" type="button">Törlés</button>
-                            </td>
                         </tr>
                     }
                 </tbody>
@@ -110,6 +122,9 @@ else
 
         _groups = await ProductGroupService.GetAllAsync(_search);
 
+        if (_selected is not null && !_groups.Any(x => x.Id == _selected.Id))
+            _selected = null;
+
         _loading = false;
         StateHasChanged();
     }
@@ -132,13 +147,40 @@ else
         catch (TaskCanceledException) { }
     }
 
-    private void OpenAdd() => _showAdd = true;
+    private void SelectRow(ProductGroupItem g)
+    {
+        _selected = new ProductGroupItem
+        {
+            Id = g.Id,
+            Name = g.Name
+        };
+    }
+
+    private void OpenAdd()
+    {
+        _showAdd = true;
+        _showEdit = _showDelete = false;
+        _selected = null;
+    }
+
     private void CloseAdd() => _showAdd = false;
 
-    private void OpenEdit(ProductGroupItem g) { _selected = g; _showEdit = true; }
+    private void OpenEdit()
+    {
+        if (_selected is null) return;
+        _showEdit = true;
+        _showAdd = _showDelete = false;
+    }
+
     private void CloseEdit() => _showEdit = false;
 
-    private void OpenDelete(ProductGroupItem g) { _selected = g; _showDelete = true; }
+    private void OpenDelete()
+    {
+        if (_selected is null) return;
+        _showDelete = true;
+        _showAdd = _showEdit = false;
+    }
+
     private void CloseDelete() => _showDelete = false;
 
     private async Task HandleAdd(string name)
@@ -157,6 +199,7 @@ else
             );
 
             _showAdd = false;
+            _selected = null;
             await LoadAsync();
         }
     }
@@ -177,13 +220,13 @@ else
             );
 
             _showEdit = false;
+            _selected = null;
             await LoadAsync();
         }
     }
 
     private async Task HandleDelete(int id)
     {
-        // keep name in log before delete
         var name = _selected?.Name ?? "(unknown)";
 
         var ok = await ProductGroupService.DeleteAsync(id);
@@ -200,6 +243,7 @@ else
             );
 
             _showDelete = false;
+            _selected = null;
             await LoadAsync();
         }
     }

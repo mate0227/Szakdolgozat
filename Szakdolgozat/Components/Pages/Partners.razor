@@ -21,6 +21,21 @@ else
                @oninput="OnSearchInput" />
 
         <button class="p-btn" type="button" @onclick="OpenAdd">Új partner</button>
+
+        <button class="p-btn secondary"
+                type="button"
+                @onclick="OpenEdit"
+                disabled="@(_selected is null || _loading)">
+            Módosítás
+        </button>
+
+        <button class="p-btn secondary danger"
+                type="button"
+                @onclick="OpenDelete"
+                disabled="@(_selected is null || _loading)">
+            Törlés
+        </button>
+
         <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
     </div>
 
@@ -38,73 +53,52 @@ else
     }
     else
     {
-        <div class="p-table-split">
-            <!-- LEFT: scrollable data -->
-            <div class="p-table-scroll">
-                <table class="p-table">
-                    <thead>
-                        <tr>
-                            <th style="width:80px;">ID</th>
-                            <th style="width:120px;">Kód</th>
-                            <th style="width:220px;">Név</th>
-                            <th style="width:120px;">Vevő</th>
-                            <th style="width:120px;">Szállító</th>
-                            <th style="width:130px;">Üzletkötő</th>
-                            <th style="width:120px;">Irányítószám</th>
-                            <th style="width:120px;">Ország</th>
-                            <th style="width:140px;">Megye</th>
-                            <th style="width:160px;">Város</th>
-                            <th>Cím</th>
-                            <th style="width:200px;">Email</th>
-                            <th style="width:140px;">Telefon</th>
-                            <th style="width:140px;">Adószám</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in _items)
-                        {
-                            <tr>
-                                <td>@p.Id</td>
-                                <td title="@p.Code">@p.Code</td>
-                                <td title="@p.Name">@p.Name</td>
-                                <td>@(p.IsCustomer ? "Igen" : "Nem")</td>
-                                <td>@(p.IsSupplier ? "Igen" : "Nem")</td>
-                                <td>@(p.IsSalesRep ? "Igen" : "Nem")</td>
-                                <td title="@p.PostalCode">@p.PostalCode</td>
-                                <td title="@p.Country">@p.Country</td>
-                                <td title="@p.County">@p.County</td>
-                                <td title="@p.City">@p.City</td>
-                                <td title="@p.Address">@p.Address</td>
-                                <td title="@p.Email">@p.Email</td>
-                                <td title="@p.Phone">@p.Phone</td>
-                                <td title="@p.TaxNumber">@p.TaxNumber</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:80px;">ID</th>
+                        <th style="width:120px;">Kód</th>
+                        <th style="width:220px;">Név</th>
+                        <th style="width:120px;">Vevő</th>
+                        <th style="width:120px;">Szállító</th>
+                        <th style="width:130px;">Üzletkötő</th>
+                        <th style="width:120px;">Irányítószám</th>
+                        <th style="width:120px;">Ország</th>
+                        <th style="width:140px;">Megye</th>
+                        <th style="width:160px;">Város</th>
+                        <th>Cím</th>
+                        <th style="width:200px;">Email</th>
+                        <th style="width:140px;">Telefon</th>
+                        <th style="width:140px;">Adószám</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in _items)
+                    {
+                        var selected = _selected?.Id == p.Id;
 
-            <!-- RIGHT: fixed action column -->
-            <div class="p-table-actions">
-                <table class="p-actions-table">
-                    <thead>
-                        <tr>
-                            <th style="width:220px; text-align:center;">Kezelés</th>
+                        <tr class="@(selected ? "row-selected" : "")"
+                            style="cursor:pointer;"
+                            @onclick="() => SelectRow(p)">
+                            <td>@p.Id</td>
+                            <td title="@p.Code">@p.Code</td>
+                            <td title="@p.Name">@p.Name</td>
+                            <td>@(p.IsCustomer ? "Igen" : "Nem")</td>
+                            <td>@(p.IsSupplier ? "Igen" : "Nem")</td>
+                            <td>@(p.IsSalesRep ? "Igen" : "Nem")</td>
+                            <td title="@p.PostalCode">@p.PostalCode</td>
+                            <td title="@p.Country">@p.Country</td>
+                            <td title="@p.County">@p.County</td>
+                            <td title="@p.City">@p.City</td>
+                            <td title="@p.Address">@p.Address</td>
+                            <td title="@p.Email">@p.Email</td>
+                            <td title="@p.Phone">@p.Phone</td>
+                            <td title="@p.TaxNumber">@p.TaxNumber</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in _items)
-                        {
-                            <tr>
-                                <td>
-                                    <button class="table-btn edit" type="button" @onclick="() => OpenEdit(p)">Módosítás</button>
-                                    <button class="table-btn delete" type="button" @onclick="() => OpenDelete(p)">Törlés</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </table>
         </div>
     }
 }
@@ -166,11 +160,16 @@ else
         try
         {
             _items = await PartnerService.GetAllAsync(_search, take: 500);
+
+            // if selected partner disappeared (deleted / filtered out), clear selection
+            if (_selected is not null && !_items.Any(x => x.Id == _selected.Id))
+                _selected = null;
         }
         catch (Exception ex)
         {
             _error = ex.Message;
             _items = new();
+            _selected = null;
         }
 
         _loading = false;
@@ -195,16 +194,7 @@ else
         catch (TaskCanceledException) { }
     }
 
-    private void OpenAdd()
-    {
-        _showAdd = true;
-        _showEdit = _showDelete = false;
-        _selected = null;
-    }
-
-    private void CloseAdd() => _showAdd = false;
-
-    private void OpenEdit(Partner p)
+    private void SelectRow(Partner p)
     {
         _selected = new Partner
         {
@@ -223,22 +213,29 @@ else
             Phone = p.Phone,
             TaxNumber = p.TaxNumber
         };
+    }
 
+    private void OpenAdd()
+    {
+        _showAdd = true;
+        _showEdit = _showDelete = false;
+        _selected = null;
+    }
+
+    private void CloseAdd() => _showAdd = false;
+
+    private void OpenEdit()
+    {
+        if (_selected is null) return;
         _showEdit = true;
         _showAdd = _showDelete = false;
     }
 
     private void CloseEdit() => _showEdit = false;
 
-    private void OpenDelete(Partner p)
+    private void OpenDelete()
     {
-        _selected = new Partner
-        {
-            Id = p.Id,
-            Code = p.Code,
-            Name = p.Name
-        };
-
+        if (_selected is null) return;
         _showDelete = true;
         _showAdd = _showEdit = false;
     }
@@ -260,6 +257,7 @@ else
         );
 
         _showAdd = false;
+        _selected = null;
         await LoadAsync();
     }
 
@@ -280,6 +278,7 @@ else
         }
 
         _showEdit = false;
+        _selected = null;
         await LoadAsync();
     }
 
@@ -303,6 +302,7 @@ else
         }
 
         _showDelete = false;
+        _selected = null;
         await LoadAsync();
     }
 }

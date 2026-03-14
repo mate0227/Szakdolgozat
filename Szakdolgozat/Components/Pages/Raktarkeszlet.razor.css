@@ -27,11 +27,6 @@
         color: #243a63;
     }
 
-        .p-btn.secondary.danger {
-            background: rgba(255,0,0,0.10);
-            color: #a00000;
-        }
-
     .p-btn:disabled {
         opacity: 0.6;
         cursor: default;
@@ -41,15 +36,21 @@
     color: #b00020;
 }
 
-.p-table-wrap {
-    overflow: auto;
+.p-table-split {
+    display: flex;
     border-radius: 12px;
     border: 1px solid rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.p-table-scroll {
+    flex: 1;
+    overflow: auto;
 }
 
 .p-table {
     width: 100%;
-    min-width: 1400px;
+    min-width: 1200px;
     border-collapse: collapse;
     table-layout: fixed;
 }
@@ -77,14 +78,30 @@
         z-index: 2;
     }
 
-    .p-table tbody tr.row-selected td {
-        background: rgba(59,107,255,0.22) !important;
+    .p-table tbody tr:hover {
+        background: rgba(59,107,255,0.05);
     }
 
-    .p-table tbody tr.row-selected:hover td {
-        background: rgba(59,107,255,0.22) !important;
+    .p-table td:nth-child(5) {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
     }
 
-    .p-table tbody tr:not(.row-selected):hover td {
-        background: rgba(0,0,0,0.03);
+    .p-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .p-toolbar .p-search {
+        flex: 0 0 auto;
+    }
+
+    .p-toolbar input.p-search {
+        flex: 1 1 320px;
+        min-width: 220px;
+    }
+
+    .p-toolbar select.p-search,
+    .p-toolbar input[type="date"] {
+        width: auto;
+        min-width: 220px;
     }

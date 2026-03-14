@@ -22,6 +22,28 @@ else
                @oninput="OnSearchInput" />
 
         <button class="p-btn" type="button" @onclick="OpenAdd">Új termék</button>
+
+        <button class="p-btn secondary"
+                type="button"
+                @onclick="OpenEdit"
+                disabled="@(_selected is null || _loading)">
+            Módosítás
+        </button>
+
+        <button class="p-btn secondary"
+                type="button"
+                @onclick="OpenPrices"
+                disabled="@(_selected is null || _loading)">
+            Árak
+        </button>
+
+        <button class="p-btn secondary danger"
+                type="button"
+                @onclick="OpenDelete"
+                disabled="@(_selected is null || _loading)">
+            Törlés
+        </button>
+
         <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
     </div>
 
@@ -39,55 +61,34 @@ else
     }
     else
     {
-        <div class="p-table-split">
-            <!-- LEFT: scrollable data -->
-            <div class="p-table-scroll">
-                <table class="p-table">
-                    <thead>
-                        <tr>
-                            <th style="width:90px;">ID</th>
-                            <th style="width:140px;">Kód</th>
-                            <th>Név</th>
-                            <th style="width:220px;">Csoport</th>
-                            <th style="width:120px;">Egység</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in _products)
-                        {
-                            <tr>
-                                <td>@p.Id</td>
-                                <td title="@p.Code">@p.Code</td>
-                                <td title="@p.Name">@p.Name</td>
-                                <td title="@($"{p.GroupName} ({p.GroupId})")">@p.GroupName (@p.GroupId)</td>
-                                <td title="@p.Unit">@p.Unit</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:90px;">ID</th>
+                        <th style="width:140px;">Kód</th>
+                        <th>Név</th>
+                        <th style="width:220px;">Csoport</th>
+                        <th style="width:120px;">Egység</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in _products)
+                    {
+                        var selected = _selected?.Id == p.Id;
 
-            <div class="p-table-actions">
-                <table class="p-actions-table">
-                    <thead>
-                        <tr>
-                            <th style="width:300px;">Kezelés</th>
+                        <tr class="@(selected ? "row-selected" : "")"
+                            style="cursor:pointer;"
+                            @onclick="() => SelectRow(p)">
+                            <td>@p.Id</td>
+                            <td title="@p.Code">@p.Code</td>
+                            <td title="@p.Name">@p.Name</td>
+                            <td title="@($"{p.GroupName} ({p.GroupId})")">@p.GroupName (@p.GroupId)</td>
+                            <td title="@p.Unit">@p.Unit</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in _products)
-                        {
-                            <tr>
-                                <td>
-                                    <button class="table-btn prices" type="button" @onclick="() => OpenPrices(p)">Árak</button>
-                                    <button class="table-btn edit" type="button" @onclick="() => OpenEdit(p)">Módosítás</button>
-                                    <button class="table-btn delete" type="button" @onclick="() => OpenDelete(p)">Törlés</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </table>
         </div>
     }
 }
@@ -95,31 +96,31 @@ else
 @if (_showAdd)
 {
     <Szakdolgozat.Components.Modals.AddProductModal Groups="_groups"
-                                                   OnClose="CloseAdd"
-                                                   OnSave="HandleAdd"
-                                                   CodeExistsAsync="ProductService.CodeExistsAsync" />
+                                                    OnClose="CloseAdd"
+                                                    OnSave="HandleAdd"
+                                                    CodeExistsAsync="ProductService.CodeExistsAsync" />
 }
 
 @if (_showEdit && _selected is not null)
 {
     <Szakdolgozat.Components.Modals.EditProductModal Product="_selected"
-                                                    Groups="_groups"
-                                                    OnClose="CloseEdit"
-                                                    OnSave="HandleEdit"
-                                                    CodeExistsAsync="ProductService.CodeExistsAsync" />
+                                                     Groups="_groups"
+                                                     OnClose="CloseEdit"
+                                                     OnSave="HandleEdit"
+                                                     CodeExistsAsync="ProductService.CodeExistsAsync" />
 }
 
 @if (_showDelete && _selected is not null)
 {
     <Szakdolgozat.Components.Modals.DeleteProductModal Product="_selected"
-                                                      OnClose="CloseDelete"
-                                                      OnDelete="HandleDelete" />
+                                                       OnClose="CloseDelete"
+                                                       OnDelete="HandleDelete" />
 }
 
 @if (_showPrices && _selectedPrices is not null)
 {
     <Szakdolgozat.Components.Modals.ProductPricesModal Product="_selectedPrices"
-                                                    OnClose="ClosePrices" />
+                                                       OnClose="ClosePrices" />
 }
 
 @code {
@@ -167,11 +168,16 @@ else
         try
         {
             _products = await ProductService.GetAllAsync(_search, take: 500);
+
+            // if the selected product disappeared (deleted / filtered out), clear selection
+            if (_selected is not null && !_products.Any(x => x.Id == _selected.Id))
+                _selected = null;
         }
         catch (Exception ex)
         {
             _error = ex.Message;
             _products = new();
+            _selected = null;
         }
 
         _loading = false;
@@ -196,28 +202,65 @@ else
         catch (TaskCanceledException) { }
     }
 
-    private void OpenAdd() { _showAdd = true; _showEdit = _showDelete = _showPrices = false; _selected = null; _selectedPrices = null; }
+    private void SelectRow(ProductItem p)
+    {
+        _selected = new ProductItem
+        {
+            Id = p.Id,
+            Code = p.Code,
+            Name = p.Name,
+            GroupId = p.GroupId,
+            GroupName = p.GroupName,
+            Unit = p.Unit
+        };
+    }
+
+    private void OpenAdd()
+    {
+        _showAdd = true;
+        _showEdit = _showDelete = _showPrices = false;
+        _selected = null;
+        _selectedPrices = null;
+    }
+
     private void CloseAdd() => _showAdd = false;
 
-    private void OpenEdit(ProductItem p)
+    private void OpenEdit()
     {
-        _selected = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit };
-        _showEdit = true; _showAdd = _showDelete = _showPrices = false;
+        if (_selected is null) return;
+        _showEdit = true;
+        _showAdd = _showDelete = _showPrices = false;
     }
+
     private void CloseEdit() => _showEdit = false;
 
-    private void OpenDelete(ProductItem p)
+    private void OpenDelete()
     {
-        _selected = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit };
-        _showDelete = true; _showAdd = _showEdit = _showPrices = false;
+        if (_selected is null) return;
+        _showDelete = true;
+        _showAdd = _showEdit = _showPrices = false;
     }
+
     private void CloseDelete() => _showDelete = false;
 
-    private void OpenPrices(ProductItem p)
+    private void OpenPrices()
     {
-        _selectedPrices = new ProductItem { Id = p.Id, Code = p.Code, Name = p.Name, GroupId = p.GroupId, GroupName = p.GroupName, Unit = p.Unit };
-        _showPrices = true; _showAdd = _showEdit = _showDelete = false;
+        if (_selected is null) return;
+
+        _selectedPrices = new ProductItem
+        {
+            Id = _selected.Id,
+            Code = _selected.Code,
+            Name = _selected.Name,
+            GroupId = _selected.GroupId,
+            GroupName = _selected.GroupName,
+            Unit = _selected.Unit
+        };
+
+        _showPrices = true;
+        _showAdd = _showEdit = _showDelete = false;
     }
+
     private void ClosePrices() => _showPrices = false;
 
     private async Task HandleAdd(ProductItem p)
@@ -235,6 +278,8 @@ else
         );
 
         _showAdd = false;
+        _selected = null;
+        _selectedPrices = null;
         await LoadAsync();
     }
 
@@ -255,6 +300,8 @@ else
         }
 
         _showEdit = false;
+        _selected = null;
+        _selectedPrices = null;
         await LoadAsync();
     }
 
@@ -278,6 +325,8 @@ else
         }
 
         _showDelete = false;
+        _selected = null;
+        _selectedPrices = null;
         await LoadAsync();
     }
 }

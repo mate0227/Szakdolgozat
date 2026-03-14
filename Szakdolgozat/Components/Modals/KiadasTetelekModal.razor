@@ -1,15 +1,16 @@
 ﻿@using Szakdolgozat.Models
 @using System.Globalization
-@inject Services.BevetelService BevetelService
+@inject Services.KiadasService KiadasService
 @inject Services.ProductService ProductService
 @inject Services.VatService VatService
 @inject Services.WarehouseService WarehouseService
 @inject Services.ProductPriceService ProductPriceService
+@inject IJSRuntime JS
 
 <div class="modal-overlay">
     <div class="modal-window bt-window">
         <div class="bt-header">
-            <h3>Tételek</h3>
+            <h3>Tételek (Kiadás)</h3>
             <div class="bt-sub">
                 Bizonylat: <b>@Fej.Bizonylat</b> | Partner: <b>@Fej.PartnerNev</b>
             </div>
@@ -32,17 +33,17 @@
                         <label>Raktár</label>
 
                         <select disabled="@(!_inputsEnabled)"
-                                class="@GetInputClass(_selectedWarehouseId is null, required: true)"
-                                value="@(_selectedWarehouseId is null ? "" : _selectedWarehouseId.Value.ToString())"
-                                @onchange="OnWarehouseSelected">
-                            <option value="">-- Válassz raktárt --</option>
+                                class="@GetInputClass(_warehouseId == 0)"
+                                value="@_warehouseId"
+                                @onchange="OnWarehouseChanged">
+                            <option value="0">-- Válassz raktárt --</option>
                             @foreach (var w in _warehouses)
                             {
                                 <option value="@w.Id">@w.Name (@w.Code)</option>
                             }
                         </select>
 
-                        @if (_showErrors && _selectedWarehouseId is null)
+                        @if (_showErrors && _warehouseId == 0)
                         {
                             <p class="field-error">Raktár kiválasztása kötelező.</p>
                         }
@@ -52,7 +53,7 @@
                         <label>Termék (név)</label>
 
                         <select disabled="@(!_inputsEnabled)"
-                                class="@GetInputClass(_selectedProductId is null, required: true)"
+                                class="@GetInputClass(_selectedProductId is null)"
                                 value="@(_selectedProductId is null ? "" : _selectedProductId.Value.ToString())"
                                 @onchange="OnProductSelected">
                             <option value="">-- Válassz terméket --</option>
@@ -87,7 +88,7 @@
                         <label>ÁFA kód</label>
 
                         <select disabled="@(!_inputsEnabled)"
-                                class="@GetInputClass(_vatId == 0, required: true)"
+                                class="@GetInputClass(_vatId == 0)"
                                 value="@_vatId"
                                 @onchange="OnVatChanged">
                             <option value="0">-- Válassz ÁFÁt --</option>
@@ -105,13 +106,14 @@
 
                     <div class="form-row">
                         <label>Mennyiség</label>
-                        <input type="number"
+                        <input id="k_qty"
+                               type="number"
                                step="0.0001"
                                value="@_mennyStr"
                                disabled="@(!_inputsEnabled)"
-                               class="@GetInputClass(_mennyStr, required: true, isDecimal: true)"
-                               @oninput="OnMennyChanged"
-                               onfocus="this.select()" />
+                               class="@GetInputClassStr(_mennyStr, required: true, isDecimal: true)"
+                               @onfocus="@(() => SelectAllAsync("k_qty"))"
+                               @oninput="OnMennyChanged" />
                         @if (_showErrors && !IsDecimal(_mennyStr))
                         {
                             <p class="field-error">Mennyiség érvénytelen.</p>
@@ -120,13 +122,14 @@
 
                     <div class="form-row">
                         <label>Nettó egységár</label>
-                        <input type="number"
+                        <input id="k_net"
+                               type="number"
                                step="0.01"
                                value="@_nettoEAStr"
                                disabled="@(!_inputsEnabled)"
-                               class="@GetInputClass(_nettoEAStr, required: true, isDecimal: true)"
-                               @oninput="OnNettoEAChanged"
-                               onfocus="this.select()" />
+                               class="@GetInputClassStr(_nettoEAStr, required: true, isDecimal: true)"
+                               @onfocus="@(() => SelectAllAsync("k_net"))"
+                               @oninput="OnNettoEAChanged" />
                         @if (_showErrors && !IsDecimal(_nettoEAStr))
                         {
                             <p class="field-error">Nettó egységár érvénytelen.</p>
@@ -135,13 +138,14 @@
 
                     <div class="form-row">
                         <label>Bruttó egységár</label>
-                        <input type="number"
+                        <input id="k_gross"
+                               type="number"
                                step="0.01"
                                value="@_bruttoEAStr"
                                disabled="@(!_inputsEnabled)"
-                               class="@GetInputClass(_bruttoEAStr, required: true, isDecimal: true)"
-                               @oninput="OnBruttoEAChanged"
-                               onfocus="this.select()" />
+                               class="@GetInputClassStr(_bruttoEAStr, required: true, isDecimal: true)"
+                               @onfocus="@(() => SelectAllAsync("k_gross"))"
+                               @oninput="OnBruttoEAChanged" />
                         @if (_showErrors && !IsDecimal(_bruttoEAStr))
                         {
                             <p class="field-error">Bruttó egységár érvénytelen.</p>
@@ -167,19 +171,31 @@
                 <div class="bt-buttons">
                     <button class="bt-btn" type="button" @onclick="ClickUjTetel" disabled="@_loading">Új tétel</button>
 
-                    <button class="bt-btn" type="button" @onclick="ClickMentes" disabled="@(!_inputsEnabled)">
+                    <button class="bt-btn"
+                            type="button"
+                            @onclick="ClickMentes"
+                            disabled="@(!_inputsEnabled)">
                         Mentés
                     </button>
 
-                    <button class="bt-btn secondary" type="button" @onclick="ClickModositas" disabled="@(_selected is null || _inputsEnabled)">
+                    <button class="bt-btn secondary"
+                            type="button"
+                            @onclick="ClickModositas"
+                            disabled="@(_selected is null || _inputsEnabled)">
                         Módosítás
                     </button>
 
-                    <button class="bt-btn danger" type="button" @onclick="ClickTorles" disabled="@(_selected is null || _inputsEnabled)">
+                    <button class="bt-btn danger"
+                            type="button"
+                            @onclick="ClickTorles"
+                            disabled="@(_selected is null || _inputsEnabled)">
                         Törlés
                     </button>
 
-                    <button class="bt-btn secondary" type="button" @onclick="ClickMegsem" disabled="@(!_inputsEnabled)">
+                    <button class="bt-btn secondary"
+                            type="button"
+                            @onclick="ClickMegsem"
+                            disabled="@(!_inputsEnabled)">
                         Mégsem
                     </button>
                 </div>
@@ -196,8 +212,8 @@
                             <th style="width:90px;">ME</th>
                             <th style="width:120px;">ÁFA</th>
                             <th style="width:140px;">Menny.</th>
-                            <th style="width:160px;">Nettó egységár</th>
-                            <th style="width:160px;">Bruttó egységár</th>
+                            <th style="width:160px;">Nettó EA</th>
+                            <th style="width:160px;">Bruttó EA</th>
                             <th style="width:160px;">Nettó érték</th>
                             <th style="width:160px;">Bruttó érték</th>
                         </tr>
@@ -212,15 +228,13 @@
                             @foreach (var t in _items)
                             {
                                 var sel = _selected?.Id == t.Id;
-                                var wh = _warehouses.FirstOrDefault(x => x.Id == t.WarehouseId);
-                                var whText = wh is null ? t.WarehouseId.ToString() : $"{wh.Name} ({wh.Code})";
-
+                                var whName = _warehouseNameById.TryGetValue(t.WarehouseId, out var n) ? n : $"#{t.WarehouseId}";
                                 <tr class="@(sel ? "row-selected" : "")"
                                     style="cursor:pointer;"
                                     title="Click to select"
                                     @onclick="() => ClickRow(t)">
                                     <td>@t.Id</td>
-                                    <td title="@whText">@whText</td>
+                                    <td title="@whName">@whName</td>
                                     <td>@t.TermekId</td>
                                     <td title="@t.Nev">@t.Nev</td>
                                     <td>@t.Me</td>
@@ -245,25 +259,26 @@
 </div>
 
 @code {
-    [Parameter] public BevetelFej Fej { get; set; } = new();
+    [Parameter] public KiadasFej Fej { get; set; } = new();
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnChanged { get; set; }
 
     private bool _loading = true;
     private string _error = "";
 
-    private List<BevetelTetel> _items = new();
-    private BevetelTetel? _selected;
+    private List<KiadasTetel> _items = new();
+    private KiadasTetel? _selected;
 
     private List<ProductItem> _products = new();
     private int? _selectedProductId;
 
-    private List<Warehouse> _warehouses = new();
-    private int? _selectedWarehouseId;
-
     private List<VatItem> _vats = new();
     private int _vatId;
     private string _afaKod = "";
+
+    private List<Warehouse> _warehouses = new();
+    private int _warehouseId;
+    private Dictionary<int, string> _warehouseNameById = new();
 
     private bool _inputsEnabled;
     private bool _showErrors;
@@ -305,6 +320,8 @@
 
         try { _warehouses = await WarehouseService.GetAllAsync(search: null, take: 5000); }
         catch (Exception ex) { _error = string.IsNullOrWhiteSpace(_error) ? ex.Message : _error; _warehouses = new(); }
+
+        _warehouseNameById = _warehouses.ToDictionary(x => x.Id, x => $"{x.Name} ({x.Code})");
     }
 
     private async Task LoadAsync()
@@ -315,7 +332,7 @@
 
         try
         {
-            _items = await BevetelService.GetTetelekAsync(Fej.Bizonylat);
+            _items = await KiadasService.GetTetelekAsync(Fej.Bizonylat);
 
             if (_selected is not null && !_items.Any(x => x.Id == _selected.Id))
                 _selected = null;
@@ -331,15 +348,17 @@
 
     private Task Close() => OnClose.InvokeAsync();
 
-    private void OnWarehouseSelected(ChangeEventArgs e)
+    private async Task SelectAllAsync(string id)
     {
-        var s = e.Value?.ToString();
-        if (!int.TryParse(s, out var id))
-        {
-            _selectedWarehouseId = null;
-            return;
-        }
-        _selectedWarehouseId = id;
+        await JS.InvokeVoidAsync("eval", $"(function(){{var el=document.getElementById('{id}'); if(el){{el.select();}}}})();");
+    }
+
+    private void OnWarehouseChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+            _warehouseId = id;
+        else
+            _warehouseId = 0;
     }
 
     private async Task OnProductSelected(ChangeEventArgs e)
@@ -365,35 +384,33 @@
         _nev = p.Name ?? "";
         _me = p.Unit ?? "";
 
-        await AutoFillFromProductPriceAsync(p.Id);
-
-        RecalcByLastEdited();
-        StateHasChanged();
-    }
-
-    private async Task AutoFillFromProductPriceAsync(int productId)
-    {
-        try
+        var price = await ProductPriceService.GetCurrentForProductAsync(id);
+        if (price is not null)
         {
-            var price = await ProductPriceService.GetCurrentForProductAsync(productId);
-            if (price is null) return;
-
-            var vat = _vats.FirstOrDefault(x => x.Id == price.VatId);
-            if (vat is not null)
-            {
-                _vatId = vat.Id;
-                _afaKod = vat.Code ?? "";
-            }
+            _vatId = price.VatId;
+            _afaKod = price.VatCode ?? "";
 
             _nettoEAStr = price.NetPrice.ToString("0.00", CultureInfo.InvariantCulture);
             _bruttoEAStr = price.GrossPrice.ToString("0.00", CultureInfo.InvariantCulture);
-            _lastEdited = LastEdited.NetUnit;
 
+            _lastEdited = LastEdited.NetUnit;
             RecalcFromNet();
+            StateHasChanged();
+            return;
         }
-        catch
+
+        if (_vatId == 0)
         {
+            var fallbackVat = _vats.FirstOrDefault();
+            if (fallbackVat is not null)
+            {
+                _vatId = fallbackVat.Id;
+                _afaKod = fallbackVat.Code ?? "";
+            }
         }
+
+        RecalcByLastEdited();
+        StateHasChanged();
     }
 
     private void ClearProductSnapshot()
@@ -428,7 +445,6 @@
     {
         _nettoEAStr = e.Value?.ToString() ?? "";
         _lastEdited = LastEdited.NetUnit;
-
         RecalcFromNet();
         StateHasChanged();
     }
@@ -437,7 +453,6 @@
     {
         _bruttoEAStr = e.Value?.ToString() ?? "";
         _lastEdited = LastEdited.GrossUnit;
-
         RecalcFromGross();
         StateHasChanged();
     }
@@ -496,7 +511,7 @@
         _bruttoTE = grossTotal.ToString("0.00", CultureInfo.InvariantCulture);
     }
 
-    private void ClickRow(BevetelTetel t)
+    private void ClickRow(KiadasTetel t)
     {
         if (_inputsEnabled) return;
 
@@ -531,8 +546,8 @@
 
         try
         {
-            await BevetelService.DeleteTetelAsync(_selected.Id);
-            await BevetelService.RecalcFejTotalsAsync(Fej.Bizonylat);
+            await KiadasService.DeleteTetelAsync(_selected.Id);
+            await KiadasService.RecalcFejTotalsAsync(Fej.Bizonylat);
 
             _selected = null;
             ClearForm();
@@ -565,7 +580,7 @@
         _showErrors = true;
         _formError = null;
 
-        if (!ValidateForm(out var warehouseId, out var termekId, out var menny, out var nettoEA, out var bruttoEA))
+        if (!ValidateForm(out var termekId, out var whId, out var menny, out var nettoEA, out var bruttoEA))
             return;
 
         if (!TryParseDecimal(_nettoTE, out var nettoTE)) nettoTE = 0m;
@@ -575,11 +590,11 @@
         {
             if (_mode == Mode.New)
             {
-                await BevetelService.CreateTetelAsync(new BevetelTetel
+                await KiadasService.CreateTetelAsync(new KiadasTetel
                 {
                     Bizonylat = Fej.Bizonylat,
-                    WarehouseId = warehouseId,
                     TermekId = termekId,
+                    WarehouseId = whId,
                     Nev = _nev.Trim(),
                     Me = _me.Trim(),
                     AfaKod = _afaKod.Trim(),
@@ -594,12 +609,12 @@
             {
                 if (_selected is null) return;
 
-                await BevetelService.UpdateTetelAsync(new BevetelTetel
+                await KiadasService.UpdateTetelAsync(new KiadasTetel
                 {
                     Id = _selected.Id,
                     Bizonylat = Fej.Bizonylat,
-                    WarehouseId = warehouseId,
                     TermekId = termekId,
+                    WarehouseId = whId,
                     Nev = _nev.Trim(),
                     Me = _me.Trim(),
                     AfaKod = _afaKod.Trim(),
@@ -612,7 +627,7 @@
             }
             else return;
 
-            await BevetelService.RecalcFejTotalsAsync(Fej.Bizonylat);
+            await KiadasService.RecalcFejTotalsAsync(Fej.Bizonylat);
 
             SetModeView();
             _showErrors = false;
@@ -642,7 +657,7 @@
         _showErrors = false;
         _formError = null;
 
-        _selectedWarehouseId = null;
+        _warehouseId = 0;
 
         _selectedProductId = null;
         ClearProductSnapshot();
@@ -669,11 +684,11 @@
         RecalcByLastEdited();
     }
 
-    private void FillFormFromSelected()
+    private async void FillFormFromSelected()
     {
         if (_selected is null) return;
 
-        _selectedWarehouseId = _selected.WarehouseId;
+        _warehouseId = _selected.WarehouseId;
 
         _selectedProductId = _selected.TermekId;
         _termekIdStr = _selected.TermekId.ToString();
@@ -688,13 +703,24 @@
         _nettoEAStr = _selected.NettoEgysegAr.ToString("0.00", CultureInfo.InvariantCulture);
         _bruttoEAStr = _selected.BruttoEgysegAr.ToString("0.00", CultureInfo.InvariantCulture);
 
+        if (_selectedProductId is not null)
+        {
+            var price = await ProductPriceService.GetCurrentForProductAsync(_selectedProductId.Value);
+            if (price is not null && _vatId == 0)
+            {
+                _vatId = price.VatId;
+                _afaKod = price.VatCode ?? _afaKod;
+            }
+        }
+
         _lastEdited = LastEdited.NetUnit;
         RecalcFromNet();
+        StateHasChanged();
     }
 
     private void ClearForm()
     {
-        _selectedWarehouseId = null;
+        _warehouseId = 0;
 
         _selectedProductId = null;
         ClearProductSnapshot();
@@ -714,16 +740,16 @@
         _lastEdited = LastEdited.None;
     }
 
-    private bool ValidateForm(out int warehouseId, out int termekId, out decimal menny, out decimal nettoEA, out decimal bruttoEA)
+    private bool ValidateForm(out int termekId, out int whId, out decimal menny, out decimal nettoEA, out decimal bruttoEA)
     {
-        warehouseId = 0;
         termekId = 0;
+        whId = 0;
         menny = 0;
         nettoEA = 0;
         bruttoEA = 0;
 
-        if (_selectedWarehouseId is null) return false;
-        warehouseId = _selectedWarehouseId.Value;
+        if (_warehouseId == 0) return false;
+        whId = _warehouseId;
 
         if (_selectedProductId is null) return false;
         termekId = _selectedProductId.Value;
@@ -749,23 +775,21 @@
 
     private static bool IsDecimal(string s) => TryParseDecimal(s, out _);
 
-    private string GetInputClass(bool invalid, bool required = false)
+    private string GetInputClass(bool invalid)
     {
         if (!_showErrors) return "";
         return invalid ? "invalid-input" : "";
     }
 
-    private string GetInputClass(string v, bool required = false, bool isDecimal = false)
+    private string GetInputClassStr(string v, bool required = false, bool isDecimal = false)
     {
         if (!_showErrors) return "";
-
         if (required && string.IsNullOrWhiteSpace(v)) return "invalid-input";
         if (isDecimal && !IsDecimal(v)) return "invalid-input";
-
         return "";
     }
 
-    private static BevetelTetel Clone(BevetelTetel t) => new()
+    private static KiadasTetel Clone(KiadasTetel t) => new()
     {
         Id = t.Id,
         Bizonylat = t.Bizonylat,

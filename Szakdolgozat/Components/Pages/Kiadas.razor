@@ -1,0 +1,275 @@
+﻿@page "/kiadas"
+@using Szakdolgozat.Models
+@inject Services.UserSession Session
+@inject NavigationManager Nav
+@inject Services.KiadasService KiadasService
+
+<h2>Kiadás</h2>
+
+@if (!Session.IsLoggedIn)
+{
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
+}
+else
+{
+    <div class="p-toolbar">
+        <input class="p-search"
+               placeholder="Keresés (bizonylat, partner kód/név, dátum, megjegyzés, ID)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <button class="p-btn" type="button" @onclick="OpenAdd" disabled="@_loading">Új kiadás</button>
+
+        <button class="p-btn secondary"
+                type="button"
+                @onclick="OpenEdit"
+                disabled="@(_loading || _selected is null)">
+            Módosítás
+        </button>
+
+        <button class="p-btn"
+                type="button"
+                @onclick="OpenTetelek"
+                disabled="@(_loading || _selected is null)">
+            Tételek
+        </button>
+
+        <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <p class="p-error">@_error</p>
+    }
+    else if (_items.Count == 0)
+    {
+        <p>Nincs kiadás.</p>
+    }
+    else
+    {
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:80px;">ID</th>
+                        <th style="width:160px;">Bizonylat</th>
+                        <th style="width:130px;">Dátum</th>
+                        <th style="width:90px;">Lezárt</th>
+
+                        <th style="width:140px;">Partner kód</th>
+                        <th style="width:260px;">Partner név</th>
+                        <th style="width:120px;">Irsz</th>
+                        <th style="width:160px;">Város</th>
+                        <th style="width:260px;">Cím</th>
+
+                        <th style="width:100px;">Valuta</th>
+                        <th style="width:130px;">Árfolyam</th>
+
+                        <th style="width:160px;">Nettó</th>
+                        <th style="width:160px;">Bruttó</th>
+                        <th>Megjegyzés</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _items)
+                    {
+                        var selected = _selected?.Id == row.Id;
+
+                        <tr class="@(selected ? "row-selected" : "")"
+                            style="cursor:pointer;"
+                            title="Click to select"
+                            @onclick="() => SelectRow(row)">
+                            <td>@row.Id</td>
+                            <td title="@row.Bizonylat">@row.Bizonylat</td>
+                            <td>@row.Datum.ToString("yyyy-MM-dd")</td>
+                            <td>@(row.Lezart ? "Igen" : "Nem")</td>
+
+                            <td title="@row.PartnerKod">@row.PartnerKod</td>
+                            <td title="@row.PartnerNev">@row.PartnerNev</td>
+                            <td title="@row.PartnerIrsz">@row.PartnerIrsz</td>
+                            <td title="@row.PartnerVaros">@row.PartnerVaros</td>
+                            <td title="@row.PartnerCim">@row.PartnerCim</td>
+
+                            <td>@row.Valuta</td>
+                            <td>@row.Arfolyam.ToString("0.####")</td>
+
+                            <td>@row.NettoErtek.ToString("0.00")</td>
+                            <td>@row.BruttoErtek.ToString("0.00")</td>
+
+                            <td title="@row.Megjegyzes">@row.Megjegyzes</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@if (_showAdd)
+{
+    <Szakdolgozat.Components.Modals.AddKiadasFejModal OnClose="CloseAdd"
+                                                      OnSave="HandleAdd" />
+}
+
+@if (_showEdit && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.EditKiadasFejModal Fej="_selected"
+                                                       OnClose="CloseEdit"
+                                                       OnSave="HandleEdit" />
+}
+
+@if (_showTetelek && _selected is not null)
+{
+    <Szakdolgozat.Components.Modals.KiadasTetelekModal Fej="_selected"
+                                                       OnClose="CloseTetelek"
+                                                       OnChanged="Reload" />
+}
+
+@code {
+    private bool _loading = true;
+    private string _error = "";
+
+    private string _search = "";
+    private CancellationTokenSource? _searchCts;
+
+    private List<KiadasFej> _items = new();
+
+    private KiadasFej? _selected;
+
+    private bool _showAdd;
+    private bool _showEdit;
+    private bool _showTetelek;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private void SelectRow(KiadasFej row)
+    {
+        // toggle select
+        if (_selected?.Id == row.Id)
+        {
+            _selected = null;
+            return;
+        }
+
+        _selected = new KiadasFej
+        {
+            Id = row.Id,
+            Bizonylat = row.Bizonylat,
+            Datum = row.Datum,
+            Lezart = row.Lezart,
+
+            PartnerKod = row.PartnerKod,
+            PartnerNev = row.PartnerNev,
+            PartnerIrsz = row.PartnerIrsz,
+            PartnerVaros = row.PartnerVaros,
+            PartnerCim = row.PartnerCim,
+
+            Megjegyzes = row.Megjegyzes,
+            Valuta = row.Valuta,
+            Arfolyam = row.Arfolyam,
+            NettoErtek = row.NettoErtek,
+            BruttoErtek = row.BruttoErtek
+        };
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+        StateHasChanged();
+
+        try
+        {
+            _items = await KiadasService.GetAllFejekAsync(_search, take: 500);
+
+            // if selected deleted/filtered out -> clear
+            if (_selected is not null && !_items.Any(x => x.Id == _selected.Id))
+                _selected = null;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _items = new();
+            _selected = null;
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Reload() => LoadAsync();
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void OpenAdd()
+    {
+        _showAdd = true;
+        _showEdit = _showTetelek = false;
+        _selected = null;
+    }
+
+    private void CloseAdd() => _showAdd = false;
+
+    private void OpenEdit()
+    {
+        if (_selected is null) return;
+        _showEdit = true;
+        _showAdd = _showTetelek = false;
+    }
+
+    private void CloseEdit() => _showEdit = false;
+
+    private void OpenTetelek()
+    {
+        if (_selected is null) return;
+        _showTetelek = true;
+        _showAdd = _showEdit = false;
+    }
+
+    private void CloseTetelek() => _showTetelek = false;
+
+    private async Task HandleAdd(KiadasFej fej)
+    {
+        await KiadasService.CreateFejAsync(fej);
+
+        _showAdd = false;
+        _selected = null;
+        await LoadAsync();
+    }
+
+    private async Task HandleEdit(KiadasFej fej)
+    {
+        await KiadasService.UpdateFejAsync(fej);
+
+        _showEdit = false;
+        _selected = null;
+        await LoadAsync();
+    }
+}

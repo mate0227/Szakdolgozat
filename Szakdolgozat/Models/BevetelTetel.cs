@@ -19,5 +19,7 @@
 
         public decimal NettoTetelErtek { get; set; }
         public decimal BruttoTetelErtek { get; set; }
+        public int WarehouseId { get; set; }
+
     }
 }
