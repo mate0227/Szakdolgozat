@@ -1,0 +1,125 @@
+﻿@using Szakdolgozat.Models
+@inject Services.ForgalomService ForgalomService
+
+<div class="modal-overlay">
+    <div class="modal-window fd-window">
+
+        <div class="fd-header">
+            <h3>Forgalom részletek</h3>
+            <div class="fd-sub">
+                Raktár: <b>@Row.WarehouseName</b> |
+                Termék: <b>@Row.ProductName</b> (@Row.ProductCode) |
+                Időszak: <b>@DateFrom.ToString("yyyy-MM-dd")</b> - <b>@DateTo.ToString("yyyy-MM-dd")</b> |
+                Nyitó: <b>@Row.NyitoQty.ToString("0.####")</b> |
+                Záró: <b>@Row.ZaroQty.ToString("0.####")</b>
+            </div>
+        </div>
+
+        @if (_loading)
+        {
+            <p>Betöltés...</p>
+        }
+        else if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <p class="fd-error">@_error</p>
+        }
+        else if (_rows.Count == 0)
+        {
+            <p>Nincs mozgás.</p>
+        }
+        else
+        {
+            <div class="fd-table-wrap">
+                <table class="fd-table">
+                    <thead>
+                        <tr>
+                            <th style="width:120px;">Típus</th>
+                            <th style="width:120px;">Dátum</th>
+                            <th style="width:160px;">Bizonylat</th>
+                            <th style="width:140px;">Menny.</th>
+                            <th style="width:140px;">Nettó EA</th>
+                            <th style="width:140px;">Bruttó EA</th>
+                            <th style="width:160px;">Nettó érték</th>
+                            <th style="width:160px;">Bruttó érték</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in _rows)
+                        {
+                            <tr>
+                                <td>@r.Tipus</td>
+                                <td>@r.Datum.ToString("yyyy-MM-dd")</td>
+                                <td>@r.Bizonylat</td>
+
+                                <td class="num">
+                                    @{
+                                        var qty = r.Quantity;
+                                        var tipus = (r.Tipus ?? "").Trim().ToUpperInvariant();
+
+                                        if (tipus == "ATADAS_KIADAS" || tipus == "KIADAS")
+                                        {
+                                            qty = qty * -1;
+                                        }
+                                    }
+                                    @qty.ToString("0.####")
+                                </td>
+
+                                <td class="num">@r.NetUnitPrice.ToString("0.00")</td>
+                                <td class="num">@r.GrossUnitPrice.ToString("0.00")</td>
+                                <td class="num">@r.NetAmount.ToString("0.00")</td>
+                                <td class="num">@r.GrossAmount.ToString("0.00")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="button-row">
+            <button class="close-btn" @onclick="Close">Bezárás</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+
+    [Parameter] public ForgalomSummaryRow Row { get; set; } = new();
+    [Parameter] public DateTime DateFrom { get; set; }
+    [Parameter] public DateTime DateTo { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool _loading = true;
+    private string _error = "";
+    private List<ForgalomDetailRow> _rows = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = "";
+
+        try
+        {
+            _rows = await ForgalomService.GetDetailsAsync(
+                Row.WarehouseCode,
+                Row.ProductId,
+                DateFrom,
+                DateTo
+            );
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
+        _loading = false;
+        StateHasChanged();
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+}

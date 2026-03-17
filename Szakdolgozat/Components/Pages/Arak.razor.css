@@ -7,7 +7,7 @@
 }
 
 .p-search {
-    flex: 1;
+    flex: 1 1 320px;
     min-width: 260px;
     padding: 10px 12px;
     border-radius: 10px;
@@ -20,6 +20,7 @@
     border-radius: 10px;
     border: 1px solid #d6d6d6;
     background: #fff;
+    min-width: 180px;
 }
 
 .p-btn {
@@ -54,7 +55,7 @@
 
 .p-table {
     width: 100%;
-    min-width: 1400px;
+    min-width: 1500px;
     border-collapse: collapse;
     table-layout: fixed;
 }
@@ -84,4 +85,10 @@
 
     .p-table tbody tr:hover td {
         background: rgba(0,0,0,0.03);
+    }
+
+    .p-table td:nth-child(3),
+    .p-table td:nth-child(4) {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
     }

@@ -9,10 +9,14 @@
 <div class="modal-overlay">
     <div class="modal-window bt-window">
         <div class="bt-header">
-            <h3>Tételek</h3>
-            <div class="bt-sub">
-                Bizonylat: <b>@Fej.Bizonylat</b> | Partner: <b>@Fej.PartnerNev</b>
+            <div class="bt-header-left">
+                <h3>Tételek</h3>
+                <div class="bt-sub">
+                    Bizonylat: <b>@Fej.Bizonylat</b> | Partner: <b>@Fej.PartnerNev</b>
+                </div>
             </div>
+
+            <button class="top-close-btn" type="button" @onclick="Close">Bezárás</button>
         </div>
 
         @if (_loading)
@@ -25,165 +29,174 @@
         }
         else
         {
-            <div class="bt-form">
-                <div class="bt-form-grid">
+            <div class="bt-toolbar">
+                <button class="bt-btn" type="button" @onclick="ClickUjTetel" disabled="@_loading">Új tétel</button>
 
-                    <div class="form-row">
-                        <label>Raktár</label>
+                <button class="bt-btn secondary" type="button" @onclick="ClickModositas" disabled="@(_selected is null || _inputsEnabled)">
+                    Módosítás
+                </button>
 
-                        <select disabled="@(!_inputsEnabled)"
-                                class="@GetInputClass(_selectedWarehouseId is null, required: true)"
-                                value="@(_selectedWarehouseId is null ? "" : _selectedWarehouseId.Value.ToString())"
-                                @onchange="OnWarehouseSelected">
-                            <option value="">-- Válassz raktárt --</option>
-                            @foreach (var w in _warehouses)
-                            {
-                                <option value="@w.Id">@w.Name (@w.Code)</option>
-                            }
-                        </select>
+                <button class="bt-btn danger" type="button" @onclick="ClickTorles" disabled="@(_selected is null || _inputsEnabled)">
+                    Törlés
+                </button>
 
-                        @if (_showErrors && _selectedWarehouseId is null)
-                        {
-                            <p class="field-error">Raktár kiválasztása kötelező.</p>
-                        }
-                    </div>
-
-                    <div class="form-row">
-                        <label>Termék (név)</label>
-
-                        <select disabled="@(!_inputsEnabled)"
-                                class="@GetInputClass(_selectedProductId is null, required: true)"
-                                value="@(_selectedProductId is null ? "" : _selectedProductId.Value.ToString())"
-                                @onchange="OnProductSelected">
-                            <option value="">-- Válassz terméket --</option>
-                            @foreach (var p in _products)
-                            {
-                                <option value="@p.Id">@p.Name (@p.Code)</option>
-                            }
-                        </select>
-
-                        @if (_showErrors && _selectedProductId is null)
-                        {
-                            <p class="field-error">Termék kiválasztása kötelező.</p>
-                        }
-                    </div>
-
-                    <div class="form-row">
-                        <label>Termék ID</label>
-                        <input value="@_termekIdStr" disabled />
-                    </div>
-
-                    <div class="form-row">
-                        <label>Név</label>
-                        <input value="@_nev" disabled />
-                    </div>
-
-                    <div class="form-row">
-                        <label>ME</label>
-                        <input value="@_me" disabled />
-                    </div>
-
-                    <div class="form-row">
-                        <label>ÁFA kód</label>
-
-                        <select disabled="@(!_inputsEnabled)"
-                                class="@GetInputClass(_vatId == 0, required: true)"
-                                value="@_vatId"
-                                @onchange="OnVatChanged">
-                            <option value="0">-- Válassz ÁFÁt --</option>
-                            @foreach (var v in _vats)
-                            {
-                                <option value="@v.Id">@v.Name (@v.Code)</option>
-                            }
-                        </select>
-
-                        @if (_showErrors && _vatId == 0)
-                        {
-                            <p class="field-error">ÁFA kiválasztása kötelező.</p>
-                        }
-                    </div>
-
-                    <div class="form-row">
-                        <label>Mennyiség</label>
-                        <input type="number"
-                               step="0.0001"
-                               value="@_mennyStr"
-                               disabled="@(!_inputsEnabled)"
-                               class="@GetInputClass(_mennyStr, required: true, isDecimal: true)"
-                               @oninput="OnMennyChanged"
-                               onfocus="this.select()" />
-                        @if (_showErrors && !IsDecimal(_mennyStr))
-                        {
-                            <p class="field-error">Mennyiség érvénytelen.</p>
-                        }
-                    </div>
-
-                    <div class="form-row">
-                        <label>Nettó egységár</label>
-                        <input type="number"
-                               step="0.01"
-                               value="@_nettoEAStr"
-                               disabled="@(!_inputsEnabled)"
-                               class="@GetInputClass(_nettoEAStr, required: true, isDecimal: true)"
-                               @oninput="OnNettoEAChanged"
-                               onfocus="this.select()" />
-                        @if (_showErrors && !IsDecimal(_nettoEAStr))
-                        {
-                            <p class="field-error">Nettó egységár érvénytelen.</p>
-                        }
-                    </div>
-
-                    <div class="form-row">
-                        <label>Bruttó egységár</label>
-                        <input type="number"
-                               step="0.01"
-                               value="@_bruttoEAStr"
-                               disabled="@(!_inputsEnabled)"
-                               class="@GetInputClass(_bruttoEAStr, required: true, isDecimal: true)"
-                               @oninput="OnBruttoEAChanged"
-                               onfocus="this.select()" />
-                        @if (_showErrors && !IsDecimal(_bruttoEAStr))
-                        {
-                            <p class="field-error">Bruttó egységár érvénytelen.</p>
-                        }
-                    </div>
-
-                    <div class="form-row">
-                        <label>Nettó tételérték</label>
-                        <input value="@_nettoTE" disabled />
-                    </div>
-
-                    <div class="form-row">
-                        <label>Bruttó tételérték</label>
-                        <input value="@_bruttoTE" disabled />
-                    </div>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(_formError))
-                {
-                    <p class="bt-error">@_formError</p>
-                }
-
-                <div class="bt-buttons">
-                    <button class="bt-btn" type="button" @onclick="ClickUjTetel" disabled="@_loading">Új tétel</button>
-
-                    <button class="bt-btn" type="button" @onclick="ClickMentes" disabled="@(!_inputsEnabled)">
-                        Mentés
-                    </button>
-
-                    <button class="bt-btn secondary" type="button" @onclick="ClickModositas" disabled="@(_selected is null || _inputsEnabled)">
-                        Módosítás
-                    </button>
-
-                    <button class="bt-btn danger" type="button" @onclick="ClickTorles" disabled="@(_selected is null || _inputsEnabled)">
-                        Törlés
-                    </button>
-
-                    <button class="bt-btn secondary" type="button" @onclick="ClickMegsem" disabled="@(!_inputsEnabled)">
-                        Mégsem
-                    </button>
-                </div>
+                <button class="bt-btn secondary" type="button" @onclick="ToggleEditor">
+                    @(_showEditor ? "Űrlap elrejtése" : "Űrlap megjelenítése")
+                </button>
             </div>
+
+            @if (_showEditor)
+            {
+                <div class="bt-form">
+                    <div class="bt-form-grid">
+
+                        <div class="form-row">
+                            <label>Raktár</label>
+
+                            <select disabled="@(!_inputsEnabled)"
+                                    class="@GetInputClass(_selectedWarehouseId is null, required: true)"
+                                    value="@(_selectedWarehouseId is null ? "" : _selectedWarehouseId.Value.ToString())"
+                                    @onchange="OnWarehouseSelected">
+                                <option value="">-- Válassz raktárt --</option>
+                                @foreach (var w in _warehouses)
+                                {
+                                    <option value="@w.Id">@w.Name (@w.Code)</option>
+                                }
+                            </select>
+
+                            @if (_showErrors && _selectedWarehouseId is null)
+                            {
+                                <p class="field-error">Raktár kiválasztása kötelező.</p>
+                            }
+                        </div>
+
+                        <div class="form-row">
+                            <label>Termék (név)</label>
+
+                            <select disabled="@(!_inputsEnabled)"
+                                    class="@GetInputClass(_selectedProductId is null, required: true)"
+                                    value="@(_selectedProductId is null ? "" : _selectedProductId.Value.ToString())"
+                                    @onchange="OnProductSelected">
+                                <option value="">-- Válassz terméket --</option>
+                                @foreach (var p in _products)
+                                {
+                                    <option value="@p.Id">@p.Name (@p.Code)</option>
+                                }
+                            </select>
+
+                            @if (_showErrors && _selectedProductId is null)
+                            {
+                                <p class="field-error">Termék kiválasztása kötelező.</p>
+                            }
+                        </div>
+
+                        <div class="form-row">
+                            <label>Termék ID</label>
+                            <input value="@_termekIdStr" disabled />
+                        </div>
+
+                        <div class="form-row">
+                            <label>Név</label>
+                            <input value="@_nev" disabled />
+                        </div>
+
+                        <div class="form-row">
+                            <label>ME</label>
+                            <input value="@_me" disabled />
+                        </div>
+
+                        <div class="form-row">
+                            <label>ÁFA kód</label>
+
+                            <select disabled="@(!_inputsEnabled)"
+                                    class="@GetInputClass(_vatId == 0, required: true)"
+                                    value="@_vatId"
+                                    @onchange="OnVatChanged">
+                                <option value="0">-- Válassz ÁFÁt --</option>
+                                @foreach (var v in _vats)
+                                {
+                                    <option value="@v.Id">@v.Name (@v.Code)</option>
+                                }
+                            </select>
+
+                            @if (_showErrors && _vatId == 0)
+                            {
+                                <p class="field-error">ÁFA kiválasztása kötelező.</p>
+                            }
+                        </div>
+
+                        <div class="form-row">
+                            <label>Mennyiség</label>
+                            <input type="number"
+                                   step="0.0001"
+                                   value="@_mennyStr"
+                                   disabled="@(!_inputsEnabled)"
+                                   class="@GetInputClass(_mennyStr, required: true, isDecimal: true)"
+                                   @oninput="OnMennyChanged"
+                                   onfocus="this.select()" />
+                            @if (_showErrors && !IsDecimal(_mennyStr))
+                            {
+                                <p class="field-error">Mennyiség érvénytelen.</p>
+                            }
+                        </div>
+
+                        <div class="form-row">
+                            <label>Nettó egységár</label>
+                            <input type="number"
+                                   step="0.01"
+                                   value="@_nettoEAStr"
+                                   disabled="@(!_inputsEnabled)"
+                                   class="@GetInputClass(_nettoEAStr, required: true, isDecimal: true)"
+                                   @oninput="OnNettoEAChanged"
+                                   onfocus="this.select()" />
+                            @if (_showErrors && !IsDecimal(_nettoEAStr))
+                            {
+                                <p class="field-error">Nettó egységár érvénytelen.</p>
+                            }
+                        </div>
+
+                        <div class="form-row">
+                            <label>Bruttó egységár</label>
+                            <input type="number"
+                                   step="0.01"
+                                   value="@_bruttoEAStr"
+                                   disabled="@(!_inputsEnabled)"
+                                   class="@GetInputClass(_bruttoEAStr, required: true, isDecimal: true)"
+                                   @oninput="OnBruttoEAChanged"
+                                   onfocus="this.select()" />
+                            @if (_showErrors && !IsDecimal(_bruttoEAStr))
+                            {
+                                <p class="field-error">Bruttó egységár érvénytelen.</p>
+                            }
+                        </div>
+
+                        <div class="form-row">
+                            <label>Nettó tételérték</label>
+                            <input value="@_nettoTE" disabled />
+                        </div>
+
+                        <div class="form-row">
+                            <label>Bruttó tételérték</label>
+                            <input value="@_bruttoTE" disabled />
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_formError))
+                    {
+                        <p class="bt-error">@_formError</p>
+                    }
+
+                    <div class="bt-buttons">
+                        <button class="bt-btn" type="button" @onclick="ClickMentes" disabled="@(!_inputsEnabled)">
+                            Mentés
+                        </button>
+
+                        <button class="bt-btn secondary" type="button" @onclick="ClickMegsem" disabled="@(!_inputsEnabled)">
+                            Mégsem
+                        </button>
+                    </div>
+                </div>
+            }
 
             <div class="bt-table-wrap">
                 <table class="bt-table">
@@ -237,10 +250,6 @@
                 </table>
             </div>
         }
-
-        <div class="button-row">
-            <button class="close-btn" type="button" @onclick="Close">Bezárás</button>
-        </div>
     </div>
 </div>
 
@@ -286,6 +295,8 @@
     private enum LastEdited { None, NetUnit, GrossUnit }
     private LastEdited _lastEdited = LastEdited.None;
 
+    private bool _showEditor;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadLookupsAsync();
@@ -293,6 +304,7 @@
 
         SetModeView();
         ClearForm();
+        _showEditor = false;
     }
 
     private async Task LoadLookupsAsync()
@@ -330,6 +342,11 @@
     }
 
     private Task Close() => OnClose.InvokeAsync();
+
+    private void ToggleEditor()
+    {
+        _showEditor = !_showEditor;
+    }
 
     private void OnWarehouseSelected(ChangeEventArgs e)
     {
@@ -516,6 +533,7 @@
         _selected = null;
         ClearForm();
         SetModeNew();
+        _showEditor = true;
     }
 
     private void ClickModositas()
@@ -523,6 +541,7 @@
         if (_selected is null) return;
         FillFormFromSelected();
         SetModeEdit();
+        _showEditor = true;
     }
 
     private async Task ClickTorles()
@@ -558,6 +577,8 @@
             FillFormFromSelected();
         else
             ClearForm();
+
+        _showEditor = false;
     }
 
     private async Task ClickMentes()
@@ -619,6 +640,7 @@
 
             _selected = null;
             ClearForm();
+            _showEditor = false;
 
             await LoadAsync();
             await OnChanged.InvokeAsync();

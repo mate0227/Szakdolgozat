@@ -43,6 +43,9 @@ builder.Services.AddScoped<PriceReportService>();
 builder.Services.AddScoped<AtadasService>();
 builder.Services.AddScoped<ForgalomService>();
 
+//publish
+builder.WebHost.UseUrls("http://0.0.0.0:5115", "https://0.0.0.0:7123");
+
 var app = builder.Build();
 
 
@@ -51,8 +54,8 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }
-
-app.UseHttpsRedirection();
+//commented out after publishing 
+//app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 

@@ -4,12 +4,78 @@
 
 @if (!Session.IsLoggedIn)
 {
-    <p>You are not logged in. Redirecting...</p>
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
 }
 else
 {
-    <h2>Üdv, @Session.CurrentUser!.Username!</h2>
-    <p>Jogosultság: @Session.CurrentUser!.RoleName</p>
+    <div class="home-container">
+        <h2>Főoldal</h2>
+
+        <div class="home-section">
+            <h3>Törzsek</h3>
+            <div class="home-cards">
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/products")'>
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">Termékek</div>
+                </div>
+
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/partners")'>
+                    <div class="card-icon">🤝</div>
+                    <div class="card-title">Partnerek</div>
+                </div>
+
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/productgroups")'>
+                    <div class="card-icon">🗂️</div>
+                    <div class="card-title">Termékcsoportok</div>
+                </div>
+
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/warehouses")'>
+                    <div class="card-icon">🏬</div>
+                    <div class="card-title">Raktárak</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="home-section">
+            <h3>Készlet</h3>
+            <div class="home-cards">
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/bevetel")'>
+                    <div class="card-icon">📥</div>
+                    <div class="card-title">Bevételezés</div>
+                </div>
+
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/atadas")'>
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">Átadás</div>
+                </div>
+
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/kiadas")'>
+                    <div class="card-icon">📤</div>
+                    <div class="card-title">Kiadás</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="home-section">
+            <h3>Kimutatások</h3>
+            <div class="home-cards">
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/raktarkeszlet")'>
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">Raktárkészlet lista</div>
+                </div>
+
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/arak")'>
+                    <div class="card-icon">💰</div>
+                    <div class="card-title">Árak</div>
+                </div>
+
+                <div class="home-card" @onclick='() => Nav.NavigateTo("/forgalom")'>
+                    <div class="card-icon">📈</div>
+                    <div class="card-title">Forgalom</div>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @code {

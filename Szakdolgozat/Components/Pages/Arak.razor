@@ -1,87 +1,99 @@
 ﻿@page "/arak"
 @using Szakdolgozat.Models
+@inject Services.UserSession Session
+@inject NavigationManager Nav
 @inject Services.PriceReportService PriceReportService
+@inject Services.ProductGroupService ProductGroupService
 
 <h2>Árak (terméktörzs)</h2>
 
-<div class="p-toolbar">
-    <input class="p-search"
-           placeholder="Keresés (cikkszám, név, csoport, egység, áfa, valuta, ID)..."
-           value="@_search"
-           @oninput="OnSearchInput" />
-
-    <select class="p-select" value="@_currency" @onchange="OnCurrencyChanged">
-        <option value="">Valuta: (mind)</option>
-        <option value="HUF">HUF</option>
-        <option value="EUR">EUR</option>
-        <option value="USD">USD</option>
-    </select>
-
-    <input class="p-date"
-           type="date"
-           value="@_asOf.ToString("yyyy-MM-dd")"
-           @onchange="OnAsOfChanged" />
-
-    <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
-</div>
-
-@if (_loading)
+@if (!Session.IsLoggedIn)
 {
-    <p>Betöltés...</p>
-}
-else if (!string.IsNullOrWhiteSpace(_error))
-{
-    <p class="p-error">@_error</p>
-}
-else if (_rows.Count == 0)
-{
-    <p>Nincs adat.</p>
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
 }
 else
 {
-    <div class="p-table-wrap">
-        <table class="p-table">
-            <thead>
-                <tr>
-                    <th style="width:90px;">ID</th>
-                    <th style="width:160px;">Cikkszám</th>
-                    <th>Termék név</th>
-                    <th style="width:220px;">Csoport</th>
-                    <th style="width:100px;">ME</th>
+    <div class="p-toolbar">
+        <input class="p-search"
+               placeholder="Keresés (cikkszám, név, csoport, egység, áfa, valuta, ID)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
 
-                    <th style="width:140px;">ÁFA</th>
+        <select class="p-select" value="@_selectedGroup" @onchange="OnGroupChanged">
+            <option value="">Termékcsoport: (mind)</option>
+            @foreach (var g in _groups)
+            {
+                <option value="@g.Name">@g.Name</option>
+            }
+        </select>
 
-                    <th style="width:140px;">Nettó ár</th>
-                    <th style="width:140px;">Bruttó ár</th>
-                    <th style="width:90px;">Valuta</th>
+        <select class="p-select" value="@_currency" @onchange="OnCurrencyChanged">
+            <option value="">Valuta: (mind)</option>
+            <option value="HUF">HUF</option>
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+        </select>
 
-                    <th style="width:130px;">Érvényes -tól</th>
-                    <th style="width:130px;">Érvényes -ig</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var r in _rows)
-                {
-                    <tr>
-                        <td>@r.ProductId</td>
-                        <td title="@r.ProductCode">@r.ProductCode</td>
-                        <td title="@r.ProductName">@r.ProductName</td>
-                        <td title="@r.GroupName">@r.GroupName</td>
-                        <td title="@r.Unit">@r.Unit</td>
+        <input class="p-date"
+               type="date"
+               value="@_asOf.ToString("yyyy-MM-dd")"
+               @onchange="OnAsOfChanged" />
 
-                        <td title="@r.VatName">@(!string.IsNullOrWhiteSpace(r.VatCode) ? r.VatCode : "-")</td>
-
-                        <td>@(r.NetPrice is null ? "-" : r.NetPrice.Value.ToString("0.00"))</td>
-                        <td>@(r.GrossPrice is null ? "-" : r.GrossPrice.Value.ToString("0.00"))</td>
-                        <td>@(string.IsNullOrWhiteSpace(r.Currency) ? "-" : r.Currency)</td>
-
-                        <td>@(r.ValidFrom is null ? "-" : r.ValidFrom.Value.ToString("yyyy-MM-dd"))</td>
-                        <td>@(r.ValidTo is null ? "-" : r.ValidTo.Value.ToString("yyyy-MM-dd"))</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
     </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <p class="p-error">@_error</p>
+    }
+    else if (_rowsFiltered.Count == 0)
+    {
+        <p>Nincs adat.</p>
+    }
+    else
+    {
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:160px;">Cikkszám</th>
+                        <th style="width:220px;">Termék név</th>
+                        <th style="width:140px;">Nettó ár</th>
+                        <th style="width:140px;">Bruttó ár</th>
+                        <th style="width:100px;">ME</th>
+                        <th style="width:140px;">ÁFA</th>
+                        <th style="width:90px;">Valuta</th>
+                        <th style="width:130px;">Érvényes -tól</th>
+                        <th style="width:130px;">Érvényes -ig</th>
+                        <th style="width:220px;">Termék csoport</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in _rowsFiltered)
+                    {
+                        <tr>
+                            <td title="@r.ProductCode">@r.ProductCode</td>
+                            <td title="@r.ProductName">@r.ProductName</td>
+
+                            <td>@(r.NetPrice is null ? "-" : r.NetPrice.Value.ToString("0.00"))</td>
+                            <td>@(r.GrossPrice is null ? "-" : r.GrossPrice.Value.ToString("0.00"))</td>
+
+                            <td title="@r.Unit">@r.Unit</td>
+                            <td title="@r.VatName">@(!string.IsNullOrWhiteSpace(r.VatCode) ? r.VatCode : "-")</td>
+                            <td>@(string.IsNullOrWhiteSpace(r.Currency) ? "-" : r.Currency)</td>
+                            <td>@(r.ValidFrom is null ? "-" : r.ValidFrom.Value.ToString("yyyy-MM-dd"))</td>
+                            <td>@(r.ValidTo is null ? "-" : r.ValidTo.Value.ToString("yyyy-MM-dd"))</td>
+                            <td title="@r.GroupName">@r.GroupName</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 }
 
 @code {
@@ -89,16 +101,42 @@ else
     private string _error = "";
 
     private string _search = "";
-    private string _currency = ""; // empty = all
+    private string _currency = "";
+    private string _selectedGroup = "";
     private DateTime _asOf = DateTime.Today;
 
     private CancellationTokenSource? _cts;
 
     private List<PriceReportRow> _rows = new();
+    private List<PriceReportRow> _rowsFiltered = new();
+    private List<ProductGroupItem> _groups = new();
 
     protected override async Task OnInitializedAsync()
     {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        await LoadGroupsAsync();
         await LoadAsync();
+    }
+
+    private async Task LoadGroupsAsync()
+    {
+        try
+        {
+            _groups = await ProductGroupService.GetAllAsync(search: null);
+            _groups = _groups
+                .Where(x => !string.IsNullOrWhiteSpace(x.Name))
+                .OrderBy(x => x.Name)
+                .ToList();
+        }
+        catch
+        {
+            _groups = new();
+        }
     }
 
     private async Task OnSearchInput(ChangeEventArgs e)
@@ -123,11 +161,20 @@ else
         await LoadAsync();
     }
 
+    private Task OnGroupChanged(ChangeEventArgs e)
+    {
+        _selectedGroup = e.Value?.ToString() ?? "";
+        ApplyGroupFilter();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
     private async Task OnAsOfChanged(ChangeEventArgs e)
     {
         var s = e.Value?.ToString();
         if (DateTime.TryParse(s, out var dt))
             _asOf = dt.Date;
+
         await LoadAsync();
     }
 
@@ -147,14 +194,33 @@ else
                 asOf: _asOf,
                 take: 5000
             );
+
+            ApplyGroupFilter();
         }
         catch (Exception ex)
         {
             _error = ex.Message;
             _rows = new();
+            _rowsFiltered = new();
         }
 
         _loading = false;
         StateHasChanged();
+    }
+
+    private void ApplyGroupFilter()
+    {
+        IEnumerable<PriceReportRow> q = _rows;
+
+        if (!string.IsNullOrWhiteSpace(_selectedGroup))
+        {
+            q = q.Where(x =>
+                string.Equals(
+                    (x.GroupName ?? "").Trim(),
+                    _selectedGroup.Trim(),
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        _rowsFiltered = q.ToList();
     }
 }

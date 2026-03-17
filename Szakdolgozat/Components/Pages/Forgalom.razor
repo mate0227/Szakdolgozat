@@ -1,83 +1,96 @@
 ﻿@page "/forgalom"
 @using Szakdolgozat.Models
+@inject Services.UserSession Session
+@inject NavigationManager Nav
 @inject Services.ForgalomService ForgalomService
 
 <h2>Forgalom</h2>
 
-<div class="p-toolbar" style="gap:10px; flex-wrap:wrap;">
-    <input class="p-search"
-           placeholder="Keresés (cikkszám, termék név, ME, ID)..."
-           value="@_search"
-           @oninput="OnSearchInput" />
-
-    <div style="display:flex; align-items:center; gap:8px;">
-        <span style="white-space:nowrap;">Dátumtól</span>
-        <input type="date"
-               value="@_dateFromStr"
-               @onchange="OnDateFromChanged"
-               disabled="@_loading" />
-    </div>
-
-    <div style="display:flex; align-items:center; gap:8px;">
-        <span style="white-space:nowrap;">Dátumig</span>
-        <input type="date"
-               value="@_dateToStr"
-               @onchange="OnDateToChanged"
-               disabled="@_loading" />
-    </div>
-
-    <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
-</div>
-
-@if (_loading)
+@if (!Session.IsLoggedIn)
 {
-    <p>Betöltés...</p>
-}
-else if (!string.IsNullOrWhiteSpace(_error))
-{
-    <p class="p-error">@_error</p>
-}
-else if (_rows.Count == 0)
-{
-    <p>Nincs adat.</p>
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
 }
 else
 {
-    <div class="p-table-wrap">
-        <table class="p-table">
-            <thead>
-                <tr>
-                    <th style="width:90px;">ID</th>
-                    <th style="width:180px;">Cikkszám</th>
-                    <th>Termék név</th>
-                    <th style="width:100px;">ME</th>
-                    <th style="width:160px;">Forgalom menny.</th>
-                    <th style="width:160px;">Forgalom nettó</th>
-                    <th style="width:160px;">Forgalom bruttó</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var r in _rows)
-                {
-                    <tr style="cursor:pointer;"
-                        @onclick="() => OpenDetails(r)">
-                        <td>@r.ProductId</td>
-                        <td title="@r.ProductCode">@r.ProductCode</td>
-                        <td title="@r.ProductName">@r.ProductName</td>
-                        <td title="@r.Unit">@r.Unit</td>
-                        <td>@r.ForgalomQty.ToString("0.####")</td>
-                        <td>@r.ForgalomNet.ToString("0.00")</td>
-                        <td>@r.ForgalomGross.ToString("0.00")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+    <div class="p-toolbar" style="gap:10px; flex-wrap:wrap;">
+        <input class="p-search"
+               placeholder="Keresés (raktár, cikkszám, termék név, ME, ID)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="white-space:nowrap;">Dátumtól</span>
+            <input type="date"
+                   value="@_dateFromStr"
+                   @onchange="OnDateFromChanged"
+                   disabled="@_loading" />
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="white-space:nowrap;">Dátumig</span>
+            <input type="date"
+                   value="@_dateToStr"
+                   @onchange="OnDateToChanged"
+                   disabled="@_loading" />
+        </div>
+
+        <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
     </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <p class="p-error">@_error</p>
+    }
+    else if (_rows.Count == 0)
+    {
+        <p>Nincs adat.</p>
+    }
+    else
+    {
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:160px;">Raktár kód</th>
+                        <th style="width:260px;">Raktár név</th>
+                        <th style="width:180px;">Cikkszám</th>
+                        <th>Termék név</th>
+                        <th style="width:140px;">Nyitó</th>
+                        <th style="width:140px;">Bevétel</th>
+                        <th style="width:140px;">Kiadás</th>
+                        <th style="width:140px;">Záró</th>
+                        <th style="width:100px;">ME</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in _rows)
+                    {
+                        <tr style="cursor:pointer;"
+                            @onclick="() => OpenDetails(r)">
+                            <td title="@r.WarehouseCode">@r.WarehouseCode</td>
+                            <td title="@r.WarehouseName">@r.WarehouseName</td>
+                            <td title="@r.ProductCode">@r.ProductCode</td>
+                            <td title="@r.ProductName">@r.ProductName</td>
+                            <td>@r.NyitoQty.ToString("0.####")</td>
+                            <td>@r.BevetelQty.ToString("0.####")</td>
+                            <td>@r.KiadasQty.ToString("0.####")</td>
+                            <td>@r.ZaroQty.ToString("0.####")</td>
+                            <td title="@r.Unit">@r.Unit</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 }
 
 @if (_showDetails && _selected is not null)
 {
-    <Szakdolgozat.Components.Modals.ForgalomDetailsModal Product="_selected"
+    <Szakdolgozat.Components.Modals.ForgalomDetailsModal Row="_selected"
                                                          DateFrom="_dateFrom"
                                                          DateTo="_dateTo"
                                                          OnClose="CloseDetails" />
@@ -102,6 +115,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
         await LoadAsync();
     }
 

@@ -158,3 +158,14 @@
     .dropdown-item:hover {
         background: rgba(59,107,255,0.12);
     }
+
+.home-link {
+    margin: 0;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+    .home-link:hover {
+        opacity: 0.7;
+    }

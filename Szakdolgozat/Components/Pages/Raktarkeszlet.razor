@@ -1,84 +1,93 @@
 ﻿@page "/raktarkeszlet"
 @using Szakdolgozat.Models
 @using System.Globalization
+@inject Services.UserSession Session
+@inject NavigationManager Nav
 @inject Services.StockService StockService
 @inject Services.ProductService ProductService
 @inject Services.WarehouseService WarehouseService
 
 <h2>Raktárkészlet lista</h2>
 
-<div class="p-toolbar" style="gap:10px; flex-wrap:wrap;">
-    <input class="p-search"
-           placeholder="Keresés (raktár kód, cikkszám)..."
-           value="@_search"
-           @oninput="OnSearchInput" />
-
-    <div style="display:flex; align-items:center; gap:8px;">
-        <span style="white-space:nowrap;">Raktár</span>
-        <select class="p-search" style="min-width:260px;" value="@_selectedWarehouseId" @onchange="OnWarehouseChanged" disabled="@_loading">
-            <option value="0">Összes</option>
-            @foreach (var w in _warehousesFiltered)
-            {
-                <option value="@w.Id">@w.Name (@w.Code)</option>
-            }
-        </select>
-    </div>
-
-    <label style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
-        <input type="checkbox" checked="@_automataOnly" @onchange="OnAutomataChanged" disabled="@_loading" />
-        Automata
-    </label>
-
-    <div style="display:flex; align-items:center; gap:8px;">
-        <span style="white-space:nowrap;">Időpont</span>
-        <input type="date" value="@_asOfDateStr" @onchange="OnAsOfDateChanged" disabled="@_loading" />
-        <button class="p-btn secondary" type="button" @onclick="ClearAsOf" disabled="@_loading || string.IsNullOrWhiteSpace(_asOfDateStr)">Törlés</button>
-    </div>
-
-    <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
-</div>
-
-@if (_loading)
+@if (!Session.IsLoggedIn)
 {
-    <p>Betöltés...</p>
-}
-else if (!string.IsNullOrWhiteSpace(_error))
-{
-    <p class="p-error">@_error</p>
-}
-else if (_rows.Count == 0)
-{
-    <p>Nincs adat.</p>
+    <p>Nem vagy bejelentkezve. Átirányítás...</p>
 }
 else
 {
-    <div class="p-table-wrap">
-        <table class="p-table">
-            <thead>
-                <tr>
-                    <th style="width:160px;">Raktár kód</th>
-                    <th style="width:260px;">Raktár név</th>
-                    <th style="width:160px;">Cikkszám</th>
-                    <th>Termék név</th>
-                    <th style="width:140px;">Mennyiség</th>
-                    <th style="width:180px;">@(_asOfActive ? "Időpont" : "Frissítve")</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var r in _rows)
+    <div class="p-toolbar" style="gap:10px; flex-wrap:wrap;">
+        <input class="p-search"
+               placeholder="Keresés (raktár kód, cikkszám)..."
+               value="@_search"
+               @oninput="OnSearchInput" />
+
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="white-space:nowrap;">Raktár</span>
+            <select class="p-search" style="min-width:260px;" value="@_selectedWarehouseId" @onchange="OnWarehouseChanged" disabled="@_loading">
+                <option value="0">Összes</option>
+                @foreach (var w in _warehousesFiltered)
                 {
-                    <tr>
-                        <td>@r.WarehouseCode</td>
-                        <td title="@r.WarehouseName">@r.WarehouseName</td>
-                        <td>@r.ProductCode</td>
-                        <td title="@r.ProductName">@r.ProductName</td>
-                        <td>@r.Qty.ToString("0.####")</td>
-                        <td>@(_asOfActive? _asOfDisplay : r.UpdatedAt.ToString("yyyy-MM-dd HH:mm"))</td>
-                    </tr>
+                    <option value="@w.Id">@w.Name (@w.Code)</option>
                 }
-            </tbody>
-        </table>
+            </select>
+        </div>
+
+        <label style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
+            <input type="checkbox" checked="@_automataOnly" @onchange="OnAutomataChanged" disabled="@_loading" />
+            Automata
+        </label>
+
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="white-space:nowrap;">Időpont</span>
+            <input type="date" value="@_asOfDateStr" @onchange="OnAsOfDateChanged" disabled="@_loading" />
+            <button class="p-btn secondary" type="button" @onclick="ClearAsOf" disabled="@_loading || string.IsNullOrWhiteSpace(_asOfDateStr)">Törlés</button>
+        </div>
+
+        <button class="p-btn secondary" type="button" @onclick="Reload" disabled="@_loading">Frissítés</button>
     </div>
+
+    @if (_loading)
+    {
+        <p>Betöltés...</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <p class="p-error">@_error</p>
+    }
+    else if (_rows.Count == 0)
+    {
+        <p>Nincs adat.</p>
+    }
+    else
+    {
+        <div class="p-table-wrap">
+            <table class="p-table">
+                <thead>
+                    <tr>
+                        <th style="width:160px;">Raktár kód</th>
+                        <th style="width:260px;">Raktár név</th>
+                        <th style="width:160px;">Cikkszám</th>
+                        <th>Termék név</th>
+                        <th style="width:140px;">Mennyiség</th>
+                        <th style="width:180px;">@(_asOfActive ? "Időpont" : "Frissítve")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in _rows)
+                    {
+                        <tr>
+                            <td>@r.WarehouseCode</td>
+                            <td title="@r.WarehouseName">@r.WarehouseName</td>
+                            <td>@r.ProductCode</td>
+                            <td title="@r.ProductName">@r.ProductName</td>
+                            <td>@r.Qty.ToString("0.####")</td>
+                            <td>@(_asOfActive? _asOfDisplay : r.UpdatedAt.ToString("yyyy-MM-dd HH:mm"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 }
 
 @code {
@@ -114,6 +123,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
         await LoadAsync();
     }
 

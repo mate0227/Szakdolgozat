@@ -1,0 +1,99 @@
+﻿.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-window {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.30);
+}
+
+.fd-window {
+    width: min(1400px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    padding: 18px 18px 18px 18px;
+}
+
+.fd-header {
+    margin-bottom: 12px;
+}
+
+.fd-sub {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-top: 4px;
+}
+
+.fd-error {
+    color: #b00020;
+    margin: 8px 0;
+}
+
+.fd-table-wrap {
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.fd-table {
+    width: 100%;
+    min-width: 1200px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+    .fd-table th,
+    .fd-table td {
+        padding: 10px;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        text-align: left;
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .fd-table th {
+        background: rgba(255,255,255,0.9);
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+        .fd-table td.num,
+        .fd-table th:nth-child(4),
+        .fd-table th:nth-child(5),
+        .fd-table th:nth-child(6),
+        .fd-table th:nth-child(7),
+        .fd-table th:nth-child(8),
+        .fd-table th:nth-child(9) {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+.button-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    position: sticky;
+    bottom: 0;
+    background: #ffffff;
+    padding: 12px 0 0;
+    margin-top: 16px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.close-btn {
+    background: rgba(0,0,0,0.08);
+    border: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+}
